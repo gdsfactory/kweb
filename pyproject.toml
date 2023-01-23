@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=60", "wheel", "build", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kweb"
+description = "KLayout API implementation of gdsfactory"
+readme = "README.md"
+classifiers = [
+	"Programming Language :: Python :: 3.7",
+	"Programming Language :: Python :: 3.8",
+	"Programming Language :: Python :: 3.9",
+	"Programming Language :: Python :: 3.10",
+	"Programming Language :: Python :: 3.11",
+	"Operating System :: OS Independent",
+]
+version = "0.0.4"
+authors = [
+    {name = "gdsfactory community", email = "contact@gdsfactory.com"},
+]
+dependencies = [
+	"klayout >= 0.28.3",
+  "fastapi",
+  "uvicorn[standard]"
+]
+
+[project.optional-dependencies]
+dev = ["black>=21", "mypy", "pre-commit", "commitizen", "gitpython", "pylsp-mypy", "types-cachetools"]
+docs = ["sphinx", "docutils==0.17.1", "sphinx_rtd_theme", "sphinxcontrib-video", "sphinx-autodoc-typehints", "sphinx-book-theme==0.3.3", "sphinx-click", "sphinx-copybutton","sphinx-markdown-tables==0.0.16", "myst-parser", "matplotlib", "nbsphinx", "autodoc_pydantic"]
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 88  # Specify the line length
+target-version = ['py310']  # Specify your Python version
+include = '\.pyi?$'
+exclude = '''  # Specify the files/dirs that should be ignored by the black formatter
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | env
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+version_files = [
+    "pyproject.toml:version",
+]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+
+[tool.pylsp-mypy]
+enabled = true
+live_mode = true
+strict = true
+
+[[tool.mypy.overrides]]
+module = "kweb"
+implicit_reexport = true
+
+[tool.isort]
+multi_line_output = 3
+line_length = 88
+include_trailing_comma = true
+skip = ["kweb/__init__.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["src", "tests"]
+# addopts = --tb=no
+addopts = '--tb=short'
+python_files = ["src/*.py", "tests/*.py"]
+norecursedirs = ["extra/*.py"]
+
+# [tool.pytest.ini_options]
+# minversion = "6.0"
+# addopts = "-ra -q"
+# testpaths = [
+#     "tests",
+#     "integration",
+# ]
