@@ -1,4 +1,2 @@
-# Sample Test passing with nose and pytest
-
-def test_pass():
+def test_pass() -> None:
     pass

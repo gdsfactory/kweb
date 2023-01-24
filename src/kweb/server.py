@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
 import asyncio
-from fastapi import WebSocket
-import time
 import json
 
 # NOTE: import db to enable stream format readers
 import klayout.db as db
 import klayout.lay as lay
+from fastapi import WebSocket
 
 host = "localhost"
 port = 8765
@@ -17,7 +16,7 @@ layout_url = (
 )
 
 
-class LayoutViewServer(object):
+class LayoutViewServer:
     def __init__(self, url):
         self.layout_view = None
         self.url = url
