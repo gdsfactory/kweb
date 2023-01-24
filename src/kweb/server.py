@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
 import asyncio
-from fastapi import WebSocket
-import time
 import json
 
 # NOTE: import db to enable stream format readers
 import klayout.db as db
 import klayout.lay as lay
+from fastapi import WebSocket
 
 host = "localhost"
 port = 8765
@@ -17,8 +16,8 @@ layout_url = (
 )
 
 
-class LayoutViewServer(object):
-    def __init__(self, url):
+class LayoutViewServer:
+    def __init__(self, url) -> None:
         self.layout_view = None
         self.url = url
 
@@ -27,10 +26,10 @@ class LayoutViewServer(object):
     #     asyncio.get_event_loop().run_until_complete(start_server)
     #     asyncio.get_event_loop().run_forever()
 
-    async def send_image(self, websocket, data):
+    async def send_image(self, websocket, data) -> None:
         await websocket.send_text(data)
 
-    def image_updated(self, websocket):
+    def image_updated(self, websocket) -> None:
         pixel_buffer = self.layout_view.get_screenshot_pixels()
         asyncio.create_task(self.send_image(websocket, pixel_buffer.to_png_data()))
 
@@ -40,27 +39,25 @@ class LayoutViewServer(object):
     def annotation_dump(self):
         return [d[1] for d in self.layout_view.annotation_templates()]
 
-    def layer_dump(self):
-        js = []
-        for l in self.layout_view.each_layer():
-            js.append(
-                {
-                    "dp": l.eff_dither_pattern(),
-                    "ls": l.eff_line_style(),
-                    "c": l.eff_fill_color(),
-                    "fc": l.eff_frame_color(),
-                    "m": l.marked,
-                    "s": l.source,
-                    "t": l.transparent,
-                    "va": l.valid,
-                    "v": l.visible,
-                    "w": l.width,
-                    "x": l.xfill,
-                    "name": l.name,
-                    "id": l.id(),
-                }
-            )
-        return js
+    def layer_dump(self) -> list[dict]:
+        return [
+            {
+                "dp": layer.eff_dither_pattern(),
+                "ls": layer.eff_line_style(),
+                "c": layer.eff_fill_color(),
+                "fc": layer.eff_frame_color(),
+                "m": layer.marked,
+                "s": layer.source,
+                "t": layer.transparent,
+                "va": layer.valid,
+                "v": layer.visible,
+                "w": layer.width,
+                "x": layer.xfill,
+                "name": layer.name,
+                "id": layer.id(),
+            }
+            for layer in self.layout_view.each_layer()
+        ]
 
     async def connection(self, websocket: WebSocket, path: str = None) -> None:
 
@@ -78,11 +75,11 @@ class LayoutViewServer(object):
             )
         )
 
-        writer_task = asyncio.create_task(self.timer(websocket))
+        # writer_task = asyncio.create_task(self.timer(websocket))
         reader_task = asyncio.create_task(self.reader(websocket))
         await reader_task
 
-    async def timer(self, websocket):
+    async def timer(self, websocket) -> None:
         print("Starting timer ...")
         self.layout_view.on_image_updated_event = lambda: self.image_updated(websocket)
         while True:
@@ -107,7 +104,7 @@ class LayoutViewServer(object):
             buttons |= lay.ButtonState.MidButton
         return buttons
 
-    def wheel_event(self, function, js):
+    def wheel_event(self, function, js) -> None:
         delta = 0
         dx = js["dx"]
         dy = js["dy"]
@@ -122,54 +119,54 @@ class LayoutViewServer(object):
                 delta, horizontal, db.Point(js["x"], js["y"]), self.buttons_from_js(js)
             )
 
-    def mouse_event(self, function, js):
+    def mouse_event(self, function, js) -> None:
         function(db.Point(js["x"], js["y"]), self.buttons_from_js(js))
 
-    async def reader(self, websocket: WebSocket):
+    async def reader(self, websocket: WebSocket) -> None:
         while True:
             js = await websocket.receive_text()
-            print(f"From Client: {js}")  # TODO: remove debug output
+            # print(f"From Client: {js}")  # TODO: remove debug output
             js = json.loads(js)
             msg = js["msg"]
-            if msg == "quit":
-                break
-            elif msg == "resize":
-                self.layout_view.resize(js["width"], js["height"])
-            elif msg == "clear-annotations":
+            if msg == "clear-annotations":
                 self.layout_view.clear_annotations()
-            elif msg == "select-ruler":
-                ruler = js["value"]
-                self.layout_view.set_config("current-ruler-template", str(ruler))
-            elif msg == "select-mode":
-                mode = js["value"]
-                self.layout_view.switch_mode(mode)
-            elif msg == "layer-v-all":
-                vis = js["value"]
-                for l in self.layout_view.each_layer():
-                    l.visible = vis
-            elif msg == "layer-v":
-                id = js["id"]
-                vis = js["value"]
-                for l in self.layout_view.each_layer():
-                    if l.id() == id:
-                        l.visible = vis
             elif msg == "initialize":
                 self.layout_view.resize(js["width"], js["height"])
                 await websocket.send_text(json.dumps({"msg": "initialized"}))
+            elif msg == "layer-v":
+                id = js["id"]
+                vis = js["value"]
+                for layer in self.layout_view.each_layer():
+                    if layer.id() == id:
+                        layer.visible = vis
+            elif msg == "layer-v-all":
+                vis = js["value"]
+                for layer in self.layout_view.each_layer():
+                    layer.visible = vis
             elif msg == "mode_select":
                 self.layout_view.switch_mode(js["mode"])
+            elif msg == "mouse_dblclick":
+                self.mouse_event(self.layout_view.send_mouse_double_clicked_event, js)
+            elif msg == "mouse_enter":
+                self.layout_view.send_enter_event()
+            elif msg == "mouse_leave":
+                self.layout_view.send_leave_event()
             elif msg == "mouse_move":
                 self.mouse_event(self.layout_view.send_mouse_move_event, js)
             elif msg == "mouse_pressed":
                 self.mouse_event(self.layout_view.send_mouse_press_event, js)
             elif msg == "mouse_released":
                 self.mouse_event(self.layout_view.send_mouse_release_event, js)
-            elif msg == "mouse_enter":
-                self.layout_view.send_enter_event()
-            elif msg == "mouse_leave":
-                self.layout_view.send_leave_event()
-            elif msg == "mouse_dblclick":
-                self.mouse_event(self.layout_view.send_mouse_double_clicked_event, js)
+            elif msg == "quit":
+                break
+            elif msg == "resize":
+                self.layout_view.resize(js["width"], js["height"])
+            elif msg == "select-mode":
+                mode = js["value"]
+                self.layout_view.switch_mode(mode)
+            elif msg == "select-ruler":
+                ruler = js["value"]
+                self.layout_view.set_config("current-ruler-template", str(ruler))
             elif msg == "wheel":
                 self.wheel_event(self.layout_view.send_wheel_event, js)
 
