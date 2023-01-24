@@ -31,11 +31,7 @@ jobs:
           cache-dependency-path: pyproject.toml
       - name: Install dependencies
         run: |
-          pip install -e .
-          pip install flake8 pytest pytest_regressions
-      - name: Lint with flake8
-        run: |
-          flake8 .
+          pip install -e .[tests]
       - name: Test with pytest
         run: pytest
   test_code_coverage:
@@ -49,7 +45,7 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          make install
+          pip install -e .[tests]
       - name: Test with pytest
         run: |
           pytest --cov=kweb tests
