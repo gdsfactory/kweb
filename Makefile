@@ -32,3 +32,8 @@ git-rm-merged:
 release:
 	git push
 	git push origin --tags
+
+build:
+	rm -rf dist
+	pip install build
+	python -m build
