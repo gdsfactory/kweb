@@ -28,3 +28,7 @@ update-pre:
 
 git-rm-merged:
 	git branch -D `git branch --merged | grep -v \* | xargs`
+
+release:
+	git push
+	git push origin --tags
