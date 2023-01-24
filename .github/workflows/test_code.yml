@@ -52,7 +52,7 @@ jobs:
           make install 
       - name: Test with pytest
         run: |
-          pytest --cov={{ cookiecutter.package_name }} {{ cookiecutter.package_name }}
+          pytest --cov=kweb tests
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
