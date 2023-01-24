@@ -15,7 +15,7 @@ templates = Jinja2Templates(directory="templates")
 
 
 @app.get("/")
-async def root():
+async def root() -> dict[str]:
     return {"message": "Hello World"}
 
 
@@ -27,7 +27,7 @@ async def gds_view(request: Request, id: str):
 
 
 @app.websocket("/gds/{id}/ws")
-async def gds_ws(websocket: WebSocket, id: str):
+async def gds_ws(websocket: WebSocket, id: str) -> None:
     await websocket.accept()
     print(id)
     if gdsfiles is not None:
