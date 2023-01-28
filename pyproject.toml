@@ -21,7 +21,8 @@ authors = [
 dependencies = [
 	"klayout >= 0.28.3",
   "fastapi",
-  "uvicorn[standard]"
+  "uvicorn[standard]",
+  "jinja2",
 ]
 
 [project.optional-dependencies]
