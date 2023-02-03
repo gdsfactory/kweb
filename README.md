@@ -1,6 +1,6 @@
 # kweb 0.0.7
-KLayout Web Viewer
 
+KLayout Web Viewer ![demo](https://i.imgur.com/HPvePvX.png)
 
 Based on https://github.com/klayoutmatthias/canvas2canvas
 
