@@ -1,4 +1,4 @@
-# kweb
+# kweb 0.0.4
 KLayout Web Viewer
 
 
