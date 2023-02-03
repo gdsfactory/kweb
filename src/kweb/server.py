@@ -144,14 +144,14 @@ class LayoutViewServer:
                 self.layout_view.switch_mode(mode)
             elif msg == "layer-v-all":
                 vis = js["value"]
-                for l in self.layout_view.each_layer():
-                    l.visible = vis
+                for layer in self.layout_view.each_layer():
+                    layer.visible = vis
             elif msg == "layer-v":
                 id = js["id"]
                 vis = js["value"]
-                for l in self.layout_view.each_layer():
-                    if l.id() == id:
-                        l.visible = vis
+                for layer in self.layout_view.each_layer():
+                    if layer.id() == id:
+                        layer.visible = vis
             elif msg == "initialize":
                 self.layout_view.resize(js["width"], js["height"])
                 await websocket.send_text(json.dumps({"msg": "initialized"}))
