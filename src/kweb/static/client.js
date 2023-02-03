@@ -172,7 +172,7 @@ function showMenu(modes, annotations) {
       inner.className = "checked";
       socket.send(JSON.stringify({ msg: "select-mode", value: m }));
     };
-     
+
     cell.appendChild(inner);
     modeRow.appendChild(cell);
 
@@ -209,7 +209,7 @@ function showMenu(modes, annotations) {
     socket.send(JSON.stringify({ msg: "clear-annotations" }));
   };
   cell.appendChild(clearRulers);
-     
+
   var index = 0;
 
   annotations.forEach(function(a) {
@@ -254,7 +254,7 @@ function showLayers(layers) {
   inner.onclick = function() {
     var checked = this.checked;
     visibilityCheckboxes.forEach(function(cb) {
-      cb.checked = checked; 
+      cb.checked = checked;
     });
     socket.send(JSON.stringify({ msg: "layer-v-all", value: checked }));
   };
@@ -262,7 +262,7 @@ function showLayers(layers) {
 
   layerRow.appendChild(cell);
   layerTable.appendChild(layerRow);
-  
+
   //  create table rows for each layer
 
   layers.forEach(function(l) {
@@ -272,7 +272,7 @@ function showLayers(layers) {
 
     cell = document.createElement("td");
     cell.className = "layer-visible-cell";
-    
+
     inner = document.createElement("input");
     visibilityCheckboxes.push(inner);
     inner.type = "checkbox";
@@ -296,12 +296,12 @@ function showLayers(layers) {
     s += "background: #" + (l.c & 0xffffff).toString(16) + ";";
     inner.style = s;
     cell.appendChild(inner);
-    
+
     cell = document.createElement("td");
     cell.className = "layer-name-cell";
     cell.textContent = (l.name != 0 ? l.name : l.s);
     layerRow.appendChild(cell);
-    
+
     layerTable.appendChild(layerRow);
 
   });
@@ -352,4 +352,3 @@ canvas.addEventListener('wheel', function (evt) {
   sendWheelEvent(canvas, "wheel", evt);
   evt.preventDefault();
 }, false);
-

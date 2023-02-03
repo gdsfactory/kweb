@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
 import asyncio
-from fastapi import WebSocket
-import time
 import json
 
 # NOTE: import db to enable stream format readers
 import klayout.db as db
 import klayout.lay as lay
+from fastapi import WebSocket
 
 host = "localhost"
 port = 8765
@@ -17,7 +16,7 @@ layout_url = (
 )
 
 
-class LayoutViewServer(object):
+class LayoutViewServer:
     def __init__(self, url):
         self.layout_view = None
         self.url = url
@@ -42,22 +41,22 @@ class LayoutViewServer(object):
 
     def layer_dump(self):
         js = []
-        for l in self.layout_view.each_layer():
+        for layer in self.layout_view.each_layer():
             js.append(
                 {
-                    "dp": l.eff_dither_pattern(),
-                    "ls": l.eff_line_style(),
-                    "c": l.eff_fill_color(),
-                    "fc": l.eff_frame_color(),
-                    "m": l.marked,
-                    "s": l.source,
-                    "t": l.transparent,
-                    "va": l.valid,
-                    "v": l.visible,
-                    "w": l.width,
-                    "x": l.xfill,
-                    "name": l.name,
-                    "id": l.id(),
+                    "dp": layer.eff_dither_pattern(),
+                    "ls": layer.eff_line_style(),
+                    "c": layer.eff_fill_color(),
+                    "fc": layer.eff_frame_color(),
+                    "m": layer.marked,
+                    "s": layer.source,
+                    "t": layer.transparent,
+                    "va": layer.valid,
+                    "v": layer.visible,
+                    "w": layer.width,
+                    "x": layer.xfill,
+                    "name": layer.name,
+                    "id": layer.id(),
                 }
             )
         return js
@@ -78,7 +77,7 @@ class LayoutViewServer(object):
             )
         )
 
-        writer_task = asyncio.create_task(self.timer(websocket))
+        asyncio.create_task(self.timer(websocket))
         reader_task = asyncio.create_task(self.reader(websocket))
         await reader_task
 
