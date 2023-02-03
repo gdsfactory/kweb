@@ -19,7 +19,7 @@ templates = Jinja2Templates(directory=module_path/"templates")
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Welcome to kweb visualizer: \n go to http://127.0.0.1:8000/gds/wg"}
 
 
 @app.get("/gds/{id}", response_class=HTMLResponse)
