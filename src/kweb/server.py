@@ -128,7 +128,7 @@ class LayoutViewServer(object):
     async def reader(self, websocket: WebSocket):
         while True:
             js = await websocket.receive_text()
-            print(f"From Client: {js}")  # TODO: remove debug output
+            # print(f"From Client: {js}")  # TODO: remove debug output
             js = json.loads(js)
             msg = js["msg"]
             if msg == "quit":
