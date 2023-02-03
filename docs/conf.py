@@ -1,5 +1,5 @@
 project = "kweb"
-version = "0.0.4"
+version = "0.0.5"
 copyright = "2022"
 # copyright = "2020, gdsfactory"
 # author = "gdsfactory"
