@@ -32,9 +32,10 @@ class LayoutViewServer:
     def load_layer_props(self):
         """Load layer properties file from klayout."""
         try:
-            from gdsfactory.pdk import get_layer_views
             import pathlib
             import tempfile
+
+            from gdsfactory.pdk import get_layer_views
 
             dirpath = pathlib.Path(tempfile.TemporaryDirectory().name) / "gdsfactory"
             dirpath.mkdir(exist_ok=True, parents=True)
