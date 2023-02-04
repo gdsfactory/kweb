@@ -12,17 +12,11 @@ jobs:
     name: Sphinx docs to gh-pages
     steps:
       - uses: actions/checkout@v3
-      - uses: conda-incubator/setup-miniconda@v2
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: 3.10
-          mamba-version: "*"
-          channels: conda-forge,defaults
-          channel-priority: true
-          activate-environment: anaconda-client-env
-      - name: Add conda to system path
-        run: |
-          echo $CONDA/bin >> $GITHUB_PATH
-      - name: Installing the library
+          python-version: '3.11'
+      - name: Installing the library and dependencies
         shell: bash -l {0}
         run: |
           sudo apt install pandoc
