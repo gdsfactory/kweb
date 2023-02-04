@@ -1,4 +1,4 @@
-# kweb 0.0.7
+# kweb 0.0.8
 
 KLayout Web Viewer ![demo](https://i.imgur.com/HPvePvX.png)
 
