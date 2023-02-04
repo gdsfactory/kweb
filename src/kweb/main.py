@@ -9,6 +9,7 @@ from kweb.server import LayoutViewServer
 
 module_path = Path(__file__).parent.absolute()
 home_path = Path.home() / ".gdsfactory" / "extra"
+home_path.mkdir(exist_ok=True, parents=True)
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory=module_path / "static"), name="static")

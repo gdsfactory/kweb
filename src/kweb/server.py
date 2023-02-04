@@ -29,6 +29,25 @@ class LayoutViewServer:
     async def send_image(self, websocket, data):
         await websocket.send_text(data)
 
+    def load_layer_props(self):
+        """Load layer properties file from klayout."""
+        try:
+            import pathlib
+            import tempfile
+
+            from gdsfactory.pdk import get_layer_views
+
+            dirpath = pathlib.Path(tempfile.TemporaryDirectory().name) / "gdsfactory"
+            dirpath.mkdir(exist_ok=True, parents=True)
+            lyp_path = dirpath / "layers.lyp"
+
+            layer_views = get_layer_views()
+            layer_views.to_lyp(filepath=lyp_path)
+
+            self.layout_view.load_layer_props(str(lyp_path))
+        except ImportError:
+            pass
+
     def image_updated(self, websocket):
         pixel_buffer = self.layout_view.get_screenshot_pixels()
         asyncio.create_task(self.send_image(websocket, pixel_buffer.to_png_data()))
@@ -66,6 +85,8 @@ class LayoutViewServer:
         self.layout_view = lay.LayoutView()
         self.layout_view.load_layout(self.url)
         self.layout_view.max_hier()
+        self.load_layer_props()
+
         await websocket.send_text(
             json.dumps(
                 {
