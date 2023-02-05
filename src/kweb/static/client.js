@@ -4,8 +4,10 @@
 
 ws_url = ws_url.replace("http://","ws://");
 ws_url = ws_url.replace("https://","wss://");
-let url = ws_url + '/ws';
+let url = ws_url + '/ws?' + "file=" + file;
 console.log(url);
+console.log(file);
+console.log("DONE");
 
 var canvas = document.getElementById("layout_canvas");
 var context = canvas.getContext("2d");

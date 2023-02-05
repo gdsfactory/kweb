@@ -1,17 +1,20 @@
 from pathlib import Path
 
-from fastapi import FastAPI, Request, WebSocket
+from fastapi import FastAPI, Request
+from starlette.endpoints import WebSocketEndpoint
+from starlette.routing import WebSocketRoute
+from starlette.requests import Request as StRequest
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from kweb.server import LayoutViewServer
+from kweb.server import LayoutViewServerEndpoint
 
 module_path = Path(__file__).parent.absolute()
 home_path = Path.home() / ".gdsfactory" / "extra"
 home_path.mkdir(exist_ok=True, parents=True)
 
-app = FastAPI()
+app = FastAPI(routes=[WebSocketRoute("/gds/ws", endpoint=LayoutViewServerEndpoint)])
 app.mount("/static", StaticFiles(directory=module_path / "static"), name="static")
 
 gdsfiles = StaticFiles(directory=home_path)
@@ -26,21 +29,20 @@ async def root():
     }
 
 
-@app.get("/gds/{id}", response_class=HTMLResponse)
-async def gds_view(request: Request, id: str):
+@app.get("/gds", response_class=HTMLResponse)
+async def gds_view(request: Request, file: str = home_path):
     return templates.TemplateResponse(
-        "client.html", {"request": request, "id": id.strip(".gds")}
+        "client.html",
+        {
+            "request": request,
+            "url": str(
+                request.url.scheme
+                + "://"
+                + request.url.hostname
+                + ":"
+                + str(request.url.port)
+                + request.url.path,
+            ),
+            "file": file,
+        },
     )
-
-
-@app.websocket("/gds/{id}/ws")
-async def gds_ws(websocket: WebSocket, id: str):
-    await websocket.accept()
-    # print(id)
-    if gdsfiles is not None:
-        # print(f"{id.replace('.gds','')}")
-        lvs = LayoutViewServer(
-            str(Path(gdsfiles.directory) / f"{id.replace('.gds','')}.gds")
-        )
-        while True:
-            await lvs.connection(websocket)
