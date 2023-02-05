@@ -4,10 +4,13 @@ import uvicorn
 
 from kweb.main import app
 
+global jupyter_server
 jupyter_server = None
 
 
 def _run() -> None:
+    global jupyter_server
+    
     config = uvicorn.Config(app)
     jupyter_server = uvicorn.Server(config)
     loop = asyncio.get_event_loop()
@@ -15,6 +18,7 @@ def _run() -> None:
 
 
 def _server_is_running() -> bool:
+    global jupyter_server
     return False if jupyter_server is None else jupyter_server.started
 
 
