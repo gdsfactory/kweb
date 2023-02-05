@@ -31,8 +31,8 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
             key, value = _param.split("=")
             params[key] = value
 
-        self.url = params["file"]
-        self.layer_props = params.get("properties_file", None)
+        self.url = params["gds_file"]
+        self.layer_props = params.get("layer_props", None)
 
     async def on_connect(self, websocket):
         await websocket.accept()

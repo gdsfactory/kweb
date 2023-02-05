@@ -25,7 +25,7 @@
 </div>
 
 <!-- needs to go here as the simple script will access the DOM -->
-<script>var ws_url="{{ url }}"; var file="{{ file }}";</script>
+<script>var ws_url="{{ url }}"; var layer_props="{{ layer_props }}"; var gds_file="{{ gds_file }}"</script>
 <script type="text/javascript" src="{{ url_for("static", path="client.js") }}"></script>
 
 </body>

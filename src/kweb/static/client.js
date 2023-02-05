@@ -4,10 +4,9 @@
 
 ws_url = ws_url.replace("http://","ws://");
 ws_url = ws_url.replace("https://","wss://");
-let url = ws_url + '/ws?' + "file=" + file;
+let url = ws_url + '/ws?' + "gds_file=" + gds_file + "&layer_props=" + layer_props;
 console.log(url);
-console.log(file);
-console.log("DONE");
+console.log(layer_props);
 
 var canvas = document.getElementById("layout_canvas");
 var context = canvas.getContext("2d");

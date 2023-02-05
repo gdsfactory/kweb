@@ -17,8 +17,8 @@ home_path.mkdir(exist_ok=True, parents=True)
 app = FastAPI(routes=[WebSocketRoute("/gds/ws", endpoint=LayoutViewServerEndpoint)])
 app.mount("/static", StaticFiles(directory=module_path / "static"), name="static")
 
-gdsfiles = StaticFiles(directory=home_path)
-app.mount("/gds_files", gdsfiles, name="gds_files")
+# gdsfiles = StaticFiles(directory=home_path)
+# app.mount("/gds_files", gdsfiles, name="gds_files")
 templates = Jinja2Templates(directory=module_path / "templates")
 
 
@@ -30,7 +30,7 @@ async def root():
 
 
 @app.get("/gds", response_class=HTMLResponse)
-async def gds_view(request: Request, file: str = home_path):
+async def gds_view(request: Request, gds_file: str, layer_props: str = home_path):
     return templates.TemplateResponse(
         "client.html",
         {
@@ -43,6 +43,7 @@ async def gds_view(request: Request, file: str = home_path):
                 + str(request.url.port)
                 + request.url.path,
             ),
-            "file": file,
+            "gds_file": gds_file,
+            "layer_props": layer_props,
         },
     )
