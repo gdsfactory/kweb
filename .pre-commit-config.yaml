@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: "5191f112dfd133e97acba8c2162c37d8613cf54b"
+    rev: "v4.4.0"
     hooks:
       - id: check-added-large-files
       - id: check-case-conflict
@@ -16,19 +16,19 @@ repos:
       - id: trailing-whitespace
 
   - repo: https://github.com/hakancelik96/unimport
-    rev: 33ead41ee30f1d323a9c2fcfd0114297efbbc4d5
+    rev: 0.14.1
     hooks:
       - id: unimport
         args: [--remove, --include-star-import]
   - repo: https://github.com/pycqa/isort
-    rev: "06d8ef58a15751eda085547cc2095a6dea098f3b"
+    rev: "5.12.0"
     hooks:
       - id: isort
         files: "kweb/.*"
         args: ["--profile", "black", "--filter-files"]
 
   - repo: https://github.com/psf/black
-    rev: "196b1f349eb2baa9bbbc483226874cc01fb7567d"
+    rev: "23.1.0"
     hooks:
       - id: black
 
@@ -38,13 +38,13 @@ repos:
   #     - id: flake8
 
   - repo: https://github.com/kynan/nbstripout
-    rev: 1185a8d25bb45ada13f64d9591c14d81d69206bc
+    rev: 0.6.1
     hooks:
       - id: nbstripout
         files: ".ipynb"
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: 97ed6fb3cf2e650d4f762ba231c3f04c41797710
+    rev: v3.3.1
     hooks:
       - id: pyupgrade
         args: [--py310-plus, --keep-runtime-typing]
@@ -56,7 +56,7 @@ repos:
   #       args: ["-L TE,TE/TM,te,ba,FPR,fpr_spacing,ro,donot"]
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: 953faa6870f6663ac0121ab4a800f1ce76bca31f
+    rev: v0.9.0.2
     hooks:
       - id: shellcheck
 
@@ -66,7 +66,7 @@ repos:
   #     - id: python-use-type-annotations
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 91c4d979550888c8d190898279bfdb0af732791e
+    rev: 1.7.4
     hooks:
       - id: bandit
         args: [--exit-zero]
@@ -137,6 +137,6 @@ repos:
   #     # - id: nbqa-isort
   #     #   args: ["--float-to-top"]
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: "v0.0.231"
+    rev: "v0.0.253"
     hooks:
       - id: ruff

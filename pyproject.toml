@@ -43,6 +43,11 @@ docs = [
     "nbsphinx",
     "autodoc_pydantic"
     ]
+ipy = [
+    "ipython",
+    "ipywidgets",
+    "ipyevents",
+]
 
 
 [tool.setuptools.packages.find]

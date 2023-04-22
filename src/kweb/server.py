@@ -2,12 +2,13 @@
 
 import asyncio
 import json
+from collections.abc import Callable
+from typing import Any
 
 # NOTE: import db to enable stream format readers
 import klayout.db as db
 import klayout.lay as lay
-from fastapi import WebSocket, Request
-
+from fastapi import WebSocket
 from starlette.endpoints import WebSocketEndpoint
 
 host = "localhost"
@@ -18,10 +19,13 @@ layout_url = (
 )
 
 
+# TODO: Not sure `WebSocket` is the right type here
+
+
 class LayoutViewServerEndpoint(WebSocketEndpoint):
     encoding = "text"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
         _params = self.scope["query_string"].decode("utf-8")
@@ -34,30 +38,30 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
         self.url = params["gds_file"]
         self.layer_props = params.get("layer_props", None)
 
-    async def on_connect(self, websocket):
+    async def on_connect(self, websocket: WebSocket) -> None:
         await websocket.accept()
         await self.connection(websocket)
 
-    async def on_receive(self, websocket, data):
+    async def on_receive(self, websocket: WebSocket, data: str) -> None:
         await self.reader(websocket, data)
 
-    async def on_disconnect(self, websocket, close_code):
+    async def on_disconnect(self, websocket: WebSocket, close_code: int) -> None:
         pass
 
-    async def send_image(self, websocket, data):
+    async def send_image(self, websocket: WebSocket, data: str) -> None:
         await websocket.send_text(data)
 
-    def image_updated(self, websocket):
+    def image_updated(self, websocket: WebSocket) -> None:
         pixel_buffer = self.layout_view.get_screenshot_pixels()
-        asyncio.create_task(self.send_image(websocket, pixel_buffer.to_png_data()))
+        asyncio.create_task(self.send_image(websocket, str(pixel_buffer.to_png_data())))
 
-    def mode_dump(self):
+    def mode_dump(self) -> list[str]:
         return self.layout_view.mode_names()
 
-    def annotation_dump(self):
+    def annotation_dump(self) -> list[str]:
         return [d[1] for d in self.layout_view.annotation_templates()]
 
-    def layer_dump(self):
+    def layer_dump(self) -> list[dict[str, object]]:
         js = []
         for layer in self.layout_view.each_layer():
             js.append(
@@ -79,10 +83,10 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
             )
         return js
 
-    async def connection(self, websocket: WebSocket, path: str = None) -> None:
+    async def connection(self, websocket: WebSocket, path: str | None = None) -> None:
         self.layout_view = lay.LayoutView()
         self.layout_view.load_layout(self.url)
-        if self.layer_props is not None:
+        if self.layer_props:
             self.layout_view.load_layer_props(self.layer_props)
         self.layout_view.max_hier()
 
@@ -99,13 +103,15 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
 
         asyncio.create_task(self.timer(websocket))
 
-    async def timer(self, websocket):
-        self.layout_view.on_image_updated_event = lambda: self.image_updated(websocket)
+    async def timer(self, websocket: WebSocket) -> None:
+        self.layout_view.on_image_updated_event = (  # type: ignore[attr-defined]
+            lambda: self.image_updated(websocket)
+        )
         while True:
-            self.layout_view.timer()
+            self.layout_view.timer()  # type: ignore[attr-defined]
             await asyncio.sleep(0.01)
 
-    def buttons_from_js(self, js):
+    def buttons_from_js(self, js: dict[str, int]) -> int:
         buttons = 0
         k = js["k"]
         b = js["b"]
@@ -123,7 +129,9 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
             buttons |= lay.ButtonState.MidButton
         return buttons
 
-    def wheel_event(self, function, js):
+    def wheel_event(
+        self, function: Callable[[int, bool, db.Point, int], None], js: dict[str, int]
+    ) -> None:
         delta = 0
         dx = js["dx"]
         dy = js["dy"]
@@ -138,10 +146,12 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                 delta, horizontal, db.Point(js["x"], js["y"]), self.buttons_from_js(js)
             )
 
-    def mouse_event(self, function, js):
+    def mouse_event(
+        self, function: Callable[[db.Point, int], None], js: dict[str, int]
+    ) -> None:
         function(db.Point(js["x"], js["y"]), self.buttons_from_js(js))
 
-    async def reader(self, websocket, data: str):
+    async def reader(self, websocket: WebSocket, data: str) -> None:
         js = json.loads(data)
         msg = js["msg"]
         if msg == "quit":
@@ -172,19 +182,30 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
         elif msg == "mode_select":
             self.layout_view.switch_mode(js["mode"])
         elif msg == "mouse_move":
-            self.mouse_event(self.layout_view.send_mouse_move_event, js)
+            self.mouse_event(
+                self.layout_view.send_mouse_move_event, js  # type: ignore[arg-type]
+            )
         elif msg == "mouse_pressed":
-            self.mouse_event(self.layout_view.send_mouse_press_event, js)
+            self.mouse_event(
+                self.layout_view.send_mouse_press_event, js  # type: ignore[arg-type]
+            )
         elif msg == "mouse_released":
-            self.mouse_event(self.layout_view.send_mouse_release_event, js)
+            self.mouse_event(
+                self.layout_view.send_mouse_release_event, js  # type: ignore[arg-type]
+            )
         elif msg == "mouse_enter":
             self.layout_view.send_enter_event()
         elif msg == "mouse_leave":
             self.layout_view.send_leave_event()
         elif msg == "mouse_dblclick":
-            self.mouse_event(self.layout_view.send_mouse_double_clicked_event, js)
+            self.mouse_event(
+                self.layout_view.send_mouse_double_clicked_event,  # ruff: noqa: E501
+                js,
+            )
         elif msg == "wheel":
-            self.wheel_event(self.layout_view.send_wheel_event, js)
+            self.wheel_event(
+                self.layout_view.send_wheel_event, js  # type: ignore[arg-type]
+            )
 
 
 # server = LayoutViewServer(layout_url)
