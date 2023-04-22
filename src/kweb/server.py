@@ -199,7 +199,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
             self.layout_view.send_leave_event()
         elif msg == "mouse_dblclick":
             self.mouse_event(
-                self.layout_view.send_mouse_double_clicked_event,  # ruff: noqa: E501
+                self.layout_view.send_mouse_double_clicked_event,
                 js,
             )
         elif msg == "wheel":
