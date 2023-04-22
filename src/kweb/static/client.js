@@ -35,6 +35,7 @@ socket.onmessage = function(evt) {
     //  message.textContent = data;
 
     //  incoming messages are JSON objects
+    console.log(data)
     js = JSON.parse(data);
     if (js.msg == "initialized") {
       initialized = true;

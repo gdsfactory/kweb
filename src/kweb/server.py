@@ -3,6 +3,7 @@
 import asyncio
 import json
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 # NOTE: import db to enable stream format readers
@@ -48,12 +49,12 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
     async def on_disconnect(self, websocket: WebSocket, close_code: int) -> None:
         pass
 
-    async def send_image(self, websocket: WebSocket, data: str) -> None:
-        await websocket.send_text(data)
+    async def send_image(self, websocket: WebSocket, data: bytes) -> None:
+        await websocket.send_bytes(data)
 
     def image_updated(self, websocket: WebSocket) -> None:
         pixel_buffer = self.layout_view.get_screenshot_pixels()
-        asyncio.create_task(self.send_image(websocket, str(pixel_buffer.to_png_data())))
+        asyncio.create_task(self.send_image(websocket, pixel_buffer.to_png_data()))
 
     def mode_dump(self) -> list[str]:
         return self.layout_view.mode_names()
@@ -86,7 +87,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
     async def connection(self, websocket: WebSocket, path: str | None = None) -> None:
         self.layout_view = lay.LayoutView()
         self.layout_view.load_layout(self.url)
-        if self.layer_props:
+        if Path(self.layer_props).is_file():
             self.layout_view.load_layer_props(self.layer_props)
         self.layout_view.max_hier()
 
