@@ -6,4 +6,4 @@ COPY --chown=jovyan . kweb
 WORKDIR kweb
 RUN make install
 WORKDIR src/kweb
-ENTRYPOINT ["make", "run"]
+ENTRYPOINT ["uvicorn", "main:app", "--host 0.0.0.0"]
