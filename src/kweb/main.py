@@ -1,8 +1,9 @@
+from glob import glob
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.routing import WebSocketRoute
@@ -18,14 +19,26 @@ home_path.mkdir(exist_ok=True, parents=True)
 app = FastAPI(routes=[WebSocketRoute("/gds/ws", endpoint=LayoutViewServerEndpoint)])
 app.mount("/static", StaticFiles(directory=module_path / "static"), name="static")
 
-# gdsfiles = StaticFiles(directory=home_path)
-# app.mount("/gds_files", gdsfiles, name="gds_files")
 templates = Jinja2Templates(directory=module_path / "templates")
 
 
 @app.get("/")
-async def root() -> dict[str, str]:
-    return {"message": "Welcome to kweb visualizer"}
+async def root(request: Request) -> _TemplateResponse:
+    files_root = Path(__file__).parent / "gds_files"
+    paths_list = glob(str(files_root / "*.gds"))
+    files_list = sorted(Path(gdsfile).name for gdsfile in paths_list)
+    files_metadata = [
+        {"name": file_name, "url": f"gds/{file_name}"} for file_name in files_list
+    ]
+    return templates.TemplateResponse(
+        "file_browser.html",
+        {
+            "request": request,
+            "message": "Welcome to kweb visualizer",
+            "files_root": files_root,
+            "files_metadata": files_metadata,
+        },
+    )
 
 
 @app.get("/gds", response_class=HTMLResponse)
@@ -49,6 +62,11 @@ async def gds_view(
             "layer_props": layer_props,
         },
     )
+
+
+@app.get("/gds/{gds_name}.gds")
+async def gds_view_static_redirect(gds_name: str):
+    return RedirectResponse(f"/gds/{gds_name}")
 
 
 @app.get("/gds/{gds_name}", response_class=HTMLResponse)
