@@ -1,3 +1,5 @@
+import pathlib
+import tempfile
 from glob import glob
 from pathlib import Path
 from typing import Any
@@ -18,13 +20,15 @@ home_path.mkdir(exist_ok=True, parents=True)
 
 app = FastAPI(routes=[WebSocketRoute("/gds/ws", endpoint=LayoutViewServerEndpoint)])
 app.mount("/static", StaticFiles(directory=module_path / "static"), name="static")
+tmp = pathlib.Path(tempfile.TemporaryDirectory().name).parent / "gdsfactory"
+tmp.mkdir(exist_ok=True, parents=True)
 
 templates = Jinja2Templates(directory=module_path / "templates")
 
 
 @app.get("/")
 async def root(request: Request) -> _TemplateResponse:
-    files_root = Path(__file__).parent / "gds_files"
+    files_root = tmp
     paths_list = glob(str(files_root / "*.gds"))
     files_list = sorted(Path(gdsfile).name for gdsfile in paths_list)
     files_metadata = [
@@ -73,7 +77,7 @@ async def gds_view_static_redirect(gds_name: str):
 async def gds_view_static(
     request: Request, gds_name: str, layer_props: str = str(home_path)
 ) -> _TemplateResponse:
-    gds_file = (Path(__file__).parent / f"gds_files/{gds_name}").with_suffix(".gds")
+    gds_file = (tmp / f"{gds_name}").with_suffix(".gds")
 
     url = str(
         request.url.scheme
