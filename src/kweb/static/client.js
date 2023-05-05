@@ -42,6 +42,9 @@ socket.onmessage = function(evt) {
     } else if (js.msg == "loaded") {
       showLayers(js.layers);
       showMenu(js.modes, js.annotations);
+      if(js.hierarchy){
+        showHierarchy(js.hierarchy);
+      }
     }
 
   } else if (initialized) {
@@ -139,7 +142,7 @@ setInterval(function() {
 
 }, 10)
 
-//  Updates the layer list
+//  Updates the Menu
 function showMenu(modes, annotations) {
 
   var modeElement = document.getElementById("modes");
@@ -307,6 +310,50 @@ function showLayers(layers) {
     layerTable.appendChild(layerRow);
 
   });
+
+}
+
+
+function showHierarchy(hierarchy) {
+
+  var hierarchyElement = document.getElementById("hierarchy");
+  hierarchyElement.childNodes = new Array();
+
+  var hierarchyUL = document.createElement("ul");
+  hierarchyUL.className = "hierarchy-ul";
+  hierarchyElement.appendChild(hierarchyUL)
+
+  function addToUL(hierarchy, ul){
+    for (const [key, value] of Object.entries(hierarchy)) {
+      console.log(`${key}: ${value}`);
+      var li = document.createElement("li");
+      ul.appendChild(li);
+      if(typeof value === 'object'){ //further hiera
+        caret = document.createElement("span");
+        caret.className = "caret";
+        caret.innerText = key;
+        sub_ul = document.createElement("ul");
+        sub_ul.className = "nested"
+        li.appendChild(caret)
+        li.appendChild(sub_ul)
+        addToUL(value, sub_ul)
+      } else {
+        li.innerText = key;
+      }
+    }
+  }
+
+  addToUL(hierarchy, hierarchyUL)
+
+  var toggler = document.getElementsByClassName("caret");
+  var i;
+
+  for (i = 0; i < toggler.length; i++) {
+    toggler[i].addEventListener("click", function() {
+      this.parentElement.querySelector(".nested").classList.toggle("active");
+      this.classList.toggle("caret-down");
+    });
+  }
 
 }
 

@@ -3,9 +3,6 @@
   "hostRequirements": {
     "cpus": 2
   },
-  "mounts": [
-      "source=${localEnv:HOME}${localEnv:USERPROFILE},target=/workspaces/kweb/share,type=bind,consistency=cached"
-  ],
   "waitFor": "onCreateCommand",
   "updateContentCommand": "make install",
   "postCreateCommand": "",
