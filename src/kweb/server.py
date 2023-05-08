@@ -84,6 +84,23 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
             )
         return js
 
+    def hierarchy_dump(self) -> dict[str, object]:
+        layout = self.layout_view.active_cellview().layout()
+        top_cell = layout.top_cell()
+
+        def get_child_dict(cell: db.Cell):
+            print(cell.name)
+            if not cell.child_cells():
+                return ""
+            child_dict = {}
+            iter = cell.each_child_cell()
+            for child_idx in iter:
+                child = layout.cell(child_idx)
+                child_dict[child.name] = get_child_dict(child)
+            return child_dict
+
+        return {top_cell.name: get_child_dict(top_cell)}
+
     async def connection(self, websocket: WebSocket, path: str | None = None) -> None:
         self.layout_view = lay.LayoutView()
         self.layout_view.load_layout(self.url)
@@ -98,6 +115,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                     "modes": self.mode_dump(),
                     "annotations": self.annotation_dump(),
                     "layers": self.layer_dump(),
+                    "hierarchy": self.hierarchy_dump(),
                 }
             )
         )

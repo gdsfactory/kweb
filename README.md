@@ -10,7 +10,7 @@ Create a virtual enviroment venv
 
 `python -m venv venv `
 
-Activate the virtual enviroment 
+Activate the virtual enviroment
 
 `source venv/bin/activate`
 
