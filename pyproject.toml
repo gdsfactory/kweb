@@ -30,7 +30,7 @@ dev = ["mypy", "pre-commit", "commitizen", "gitpython", "pylsp-mypy", "types-cac
 tests = ["pytest", "pytest-cov"]
 docs = [
     "sphinx",
-    "docutils==0.17.1",
+    "docutils==0.20",
     "sphinx_rtd_theme",
     "sphinxcontrib-video",
     "sphinx-autodoc-typehints",
