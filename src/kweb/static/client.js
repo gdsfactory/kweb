@@ -8,21 +8,27 @@ let url = ws_url + '/ws?' + "gds_file=" + gds_file + "&layer_props=" + layer_pro
 console.log(url);
 console.log(layer_props);
 
-var canvas = document.getElementById("layout_canvas");
-var context = canvas.getContext("2d");
+let canvas = document.getElementById("layout_canvas");
+let context = canvas.getContext("2d");
 
-var message = document.getElementById("message");
+let message = document.getElementById("message");
 
 let socket = new WebSocket(url);
 socket.binaryType = "blob";
-var initialized = false;
+let initialized = false;
 
-//  Installs a handler called when the connection is established
-socket.onopen = function(evt) {
+async function initializeWebSocket() {
+  await new Promise((resolve) => {
+    //  Installs a handler called when the connection is established
+    socket.onopen = function(evt) {
+      let ev = { msg: "initialize", width: canvas.width, height: canvas.height };
+      socket.send(JSON.stringify(ev));
+      resolve(); // Resolve the promise when the WebSocket is ready
+    };
+  });
 
-  var ev = { msg: "initialize", width: canvas.width, height: canvas.height };
-  socket.send(JSON.stringify(ev));
-
+  // Call resizeCanvas the first time
+  resizeCanvas();
 }
 
 //  Installs a handler for the messages delivered by the web socket
@@ -42,9 +48,6 @@ socket.onmessage = function(evt) {
     } else if (js.msg == "loaded") {
       showLayers(js.layers);
       showMenu(js.modes, js.annotations);
-      if(js.hierarchy){
-        showHierarchy(js.hierarchy);
-      }
     }
 
   } else if (initialized) {
@@ -62,10 +65,10 @@ socket.onclose = evt => console.log(`Closed ${evt.code}`);
 
 function mouseEventToJSON(canvas, type, evt) {
 
-  var rect = canvas.getBoundingClientRect();
-  var x = evt.clientX - rect.left;
-  var y = evt.clientY - rect.top;
-  var keys = 0;
+  let rect = canvas.getBoundingClientRect();
+  let x = evt.clientX - rect.left;
+  let y = evt.clientY - rect.top;
+  let keys = 0;
   if (evt.shiftKey) {
     keys += 1;
   }
@@ -82,7 +85,7 @@ function mouseEventToJSON(canvas, type, evt) {
 function sendMouseEvent(canvas, type, evt) {
 
   if (socket.readyState == 1 /*OPEN*/) {
-    var ev = mouseEventToJSON(canvas, type, evt);
+    let ev = mouseEventToJSON(canvas, type, evt);
     socket.send(JSON.stringify(ev));
   }
 
@@ -91,7 +94,7 @@ function sendMouseEvent(canvas, type, evt) {
 function sendWheelEvent(canvas, type, evt) {
 
   if (socket.readyState == 1 /*OPEN*/) {
-    var ev = mouseEventToJSON(canvas, type, evt);
+    let ev = mouseEventToJSON(canvas, type, evt);
     ev.dx = evt.deltaX;
     ev.dy = evt.deltaY;
     ev.dm = evt.deltaMode;
@@ -100,126 +103,104 @@ function sendWheelEvent(canvas, type, evt) {
 
 }
 
-//  HTML5 does not have a resize event, so we need to poll
-//  to generate events for the canvas resize
+let lastCanvasWidth = 0;
+let lastCanvasHeight = 0;
 
-var lastCanvasWidth = 0;
-var lastCanvasHeight = 0;
+function resizeCanvas() {
+  let view = document.getElementById('layout-view');
+  let w = canvas.clientWidth;
+  let h = canvas.clientHeight;
 
-setInterval(function() {
-
-  var view = document.getElementById('layout-view');
-  var w = view.clientWidth;
-  var h = view.clientHeight;
+  view.height = view.parentElement.clientHeight;
 
   if (lastCanvasWidth !== w || lastCanvasHeight !== h) {
-
-    //  this avoids flicker:
-
-    var tempCanvas = document.createElement('canvas');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    var tempContext = tempCanvas.getContext("2d");
-    tempContext.drawImage(context.canvas, 0, 0);
-
     lastCanvasWidth = w;
     lastCanvasHeight = h;
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
 
-    context.drawImage(tempContext.canvas, 0, 0);
+    canvas.width = w;
+    canvas.height = h;
 
-    socket.send(JSON.stringify({ msg: "resize", width: canvas.width, height: canvas.height }));
-
-    //  resizes the layer list:
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ msg: "resize", width: w, height: h }));
+    }
+    else if (socket.readyState === WebSocket.CONNECTING){
+    }
+    else {
+      console.error(socket.readyState)
+    }
 
     let layers = document.getElementById("layers");
-
-    var padding = 10; //  padding in pixels
-    layers.style.height = (h - 2 * padding) + "px";
-
+    layers.style.height = h + "px";
   }
+}
 
-}, 10)
+initializeWebSocket();
+
+setInterval(resizeCanvas, 10); // Call resizeCanvas every 10ms
+
+
+window.addEventListener("resize", function() {
+  if (initialized) {
+    resizeCanvas();
+  }
+});
 
 //  Updates the Menu
 function showMenu(modes, annotations) {
 
-  var modeElement = document.getElementById("modes");
+  let modeElement = document.getElementById("modes");
   modeElement.childNodes = new Array();
 
-  var modeTable = document.createElement("table");
-  modeTable.className = "modes-table";
-  modeElement.appendChild(modeTable)
-
-  var modeRow = document.createElement("tr");
-  modeRow.className = "mode-row-header";
+  let modeRow = document.createElement("div");
+  modeRow.className = "btn-group";
+  modeRow.setAttribute("role", "group");
+  modeRow.role = "group";
+  modeRow.aria_label = "Layout Mode Selection"
   modeRow.id = "mode-row";
-  modeTable.appendChild(modeRow)
+  modeRow.childNodes = new Array();
+  modeElement.appendChild(modeRow);
 
-  var cell;
-  var inner;
+  modes.forEach(function(m, i) {
 
-  modes.forEach(function(m) {
 
-    cell = document.createElement("td");
-    cell.className = "mode-cell";
-
-    var inner = document.createElement("input");
+    let inner = document.createElement("input");
     inner.value = m;
-    inner.type = "button";
-    inner.className = "unchecked";
+    inner.type = "radio";
+    inner.className = "btn-check";
+    inner.id = "btnradio" + m;
+    inner.setAttribute("name", "radiomode");
+    if (i==0) {
+      inner.setAttribute("checked", "");
+    }
     inner.onclick = function() {
-      var modeRow = document.getElementById("mode-row");
-      modeRow.childNodes.forEach(function (e) {
-        e.firstChild.className = "unchecked";
-      });
-      inner.className = "checked";
       socket.send(JSON.stringify({ msg: "select-mode", value: m }));
     };
+    let innerlabel = document.createElement("label");
+    innerlabel.textContent = m;
+    innerlabel.className = "btn btn-outline-primary";
+    innerlabel.setAttribute("for", "btnradio" + m);
 
-    cell.appendChild(inner);
-    modeRow.appendChild(cell);
+    modeRow.appendChild(inner);
+    modeRow.appendChild(innerlabel);
 
   });
 
-  var menuElement = document.getElementById("menu");
+  let menuElement = document.getElementById("menu");
 
-  var menuTable = document.createElement("table");
-  menuTable.className = "menu-table";
-  menuElement.appendChild(menuTable)
-
-  var menuRow = document.createElement("tr");
-  menuRow.className = "menu-row-header";
-  menuTable.appendChild(menuRow)
-
-  cell = document.createElement("td");
-  cell.className = "menu-cell";
-  menuRow.appendChild(cell);
-
-  var rulersSelect = document.createElement("select");
-  rulersSelect.onchange = function() {
-    socket.send(JSON.stringify({ msg: "select-ruler", value: rulersSelect.selectedIndex }));
-  };
-  cell.appendChild(rulersSelect);
-
-  cell = document.createElement("td");
-  cell.className = "menu-cell";
-  menuRow.appendChild(cell);
-
-  var clearRulers = document.createElement("input");
-  clearRulers.value = "Clear Rulers";
-  clearRulers.type = "button";
+  let clearRulers = document.createElement("button");
+  clearRulers.textContent = "Clear Rulers";
+  clearRulers.className = "btn btn-primary";
+  clearRulers.setAttribute("type", "button");
   clearRulers.onclick = function() {
     socket.send(JSON.stringify({ msg: "clear-annotations" }));
   };
-  cell.appendChild(clearRulers);
+  menuElement.appendChild(clearRulers);
 
-  var index = 0;
+  let index = 0;
 
   annotations.forEach(function(a) {
 
-    var option = document.createElement("option");
+    let option = document.createElement("option");
     option.value = index;
     option.text = a;
 
@@ -233,19 +214,19 @@ function showMenu(modes, annotations) {
 //  Updates the layer list
 function showLayers(layers) {
 
-  var layerElement = document.getElementById("layers");
+  let layerElement = document.getElementById("layers");
   layerElement.childNodes = new Array();
 
-  var layerTable = document.createElement("table");
+  let layerTable = document.createElement("table");
   layerTable.className = "layer-table";
   layerElement.appendChild(layerTable)
 
-  var cell;
-  var inner;
-  var s;
-  var visibilityCheckboxes = [];
+  let cell;
+  let inner;
+  let s;
+  let visibilityCheckboxes = [];
 
-  var layerRow = document.createElement("tr");
+  let layerRow = document.createElement("tr");
   layerRow.className = "layer-row-header";
 
   //  create a top level entry for resetting/setting all visible flags
@@ -257,7 +238,7 @@ function showLayers(layers) {
   inner.type = "checkbox";
   inner.checked = true;
   inner.onclick = function() {
-    var checked = this.checked;
+    let checked = this.checked;
     visibilityCheckboxes.forEach(function(cb) {
       cb.checked = checked;
     });
@@ -272,7 +253,7 @@ function showLayers(layers) {
 
   layers.forEach(function(l) {
 
-    var layerRow = document.createElement("tr");
+    let layerRow = document.createElement("tr");
     layerRow.className = "layer-row";
 
     cell = document.createElement("td");
@@ -313,49 +294,6 @@ function showLayers(layers) {
 
 }
 
-
-function showHierarchy(hierarchy) {
-
-  var hierarchyElement = document.getElementById("hierarchy");
-  hierarchyElement.childNodes = new Array();
-
-  var hierarchyUL = document.createElement("ul");
-  hierarchyUL.className = "hierarchy-ul";
-  hierarchyElement.appendChild(hierarchyUL)
-
-  function addToUL(hierarchy, ul){
-    for (const [key, value] of Object.entries(hierarchy)) {
-      console.log(`${key}: ${value}`);
-      var li = document.createElement("li");
-      ul.appendChild(li);
-      if(typeof value === 'object'){ //further hiera
-        caret = document.createElement("span");
-        caret.className = "caret";
-        caret.innerText = key;
-        sub_ul = document.createElement("ul");
-        sub_ul.className = "nested"
-        li.appendChild(caret)
-        li.appendChild(sub_ul)
-        addToUL(value, sub_ul)
-      } else {
-        li.innerText = key;
-      }
-    }
-  }
-
-  addToUL(hierarchy, hierarchyUL)
-
-  var toggler = document.getElementsByClassName("caret");
-  var i;
-
-  for (i = 0; i < toggler.length; i++) {
-    toggler[i].addEventListener("click", function() {
-      this.parentElement.querySelector(".nested").classList.toggle("active");
-      this.classList.toggle("caret-down");
-    });
-  }
-
-}
 
 //  Prevents the context menu to show up over the canvas area
 canvas.addEventListener('contextmenu', function(evt) {

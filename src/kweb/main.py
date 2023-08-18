@@ -20,27 +20,25 @@ home_path.mkdir(exist_ok=True, parents=True)
 
 app = FastAPI(routes=[WebSocketRoute("/gds/ws", endpoint=LayoutViewServerEndpoint)])
 app.mount("/static", StaticFiles(directory=module_path / "static"), name="static")
-tmp = pathlib.Path(tempfile.TemporaryDirectory().name).parent / "gdsfactory"
-tmp.mkdir(exist_ok=True, parents=True)
-
 templates = Jinja2Templates(directory=module_path / "templates")
 
+gds_files = module_path / "gds_files"
 
 @app.get("/")
 async def root(request: Request) -> _TemplateResponse:
-    files_root = tmp
-    paths_list = glob(str(files_root / "*.gds"))
-    files_list = sorted(Path(gdsfile).name for gdsfile in paths_list)
-    files_metadata = [
-        {"name": file_name, "url": f"gds/{file_name}"} for file_name in files_list
-    ]
+#     files_root = tmp
+#     paths_list = glob(str(files_root / "*.gds"))
+#     files_list = sorted(Path(gdsfile).name for gdsfile in paths_list)
+#     files_metadata = [
+#         {"name": file_name, "url": f"gds/{file_name}"} for file_name in files_list
+#     ]
     return templates.TemplateResponse(
         "file_browser.html",
         {
             "request": request,
             "message": "Welcome to kweb visualizer",
-            "files_root": files_root,
-            "files_metadata": files_metadata,
+            # "files_root": files_root,
+            # "files_metadata": files_metadata,
         },
     )
 
@@ -67,17 +65,15 @@ async def gds_view(
         },
     )
 
-
 @app.get("/gds/{gds_name}.gds")
-async def gds_view_static_redirect(gds_name: str):
+async def gds_view_static_redirect(gds_name: str) -> RedirectResponse:
     return RedirectResponse(f"/gds/{gds_name}")
-
 
 @app.get("/gds/{gds_name}", response_class=HTMLResponse)
 async def gds_view_static(
     request: Request, gds_name: str, layer_props: str = str(home_path)
 ) -> _TemplateResponse:
-    gds_file = (tmp / f"{gds_name}").with_suffix(".gds")
+    gds_file = (gds_files / f"{gds_name}").with_suffix(".gds")
 
     url = str(
         request.url.scheme
@@ -102,3 +98,8 @@ async def gds_view_static(
 @app.get("/status")
 async def status() -> dict[str, Any]:
     return {"server": "kweb", "version": version}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app)

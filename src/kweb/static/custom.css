@@ -1,0 +1,47 @@
+/* Custom CSS to set default background color to darker shades */
+body {
+  background-color: #1a1a1a; /* Darker grey for the body */
+  color: #aaa;
+  width: 100vw;
+  height: 100vh;
+}
+
+.canvas-container {
+  background-color: #555; /* Even darker grey for the canvas container */
+}
+
+/* Change Bootstrap button color */
+.btn-outline-primary {
+  border-color: #aaa !important;
+  color: #aaa
+}
+.btn-primary {
+  border-color: #333 !important;
+  background-color: #333;
+  color: #aaa
+}
+.btn-primary:hover {
+  background-color: #aaa !important;
+  border-color: #aaa !important;
+}
+.btn-primary:active {
+  background-color: #666 !important;
+  border-color: #fff !important;
+}
+.btn-outline-primary:hover {
+  background-color: #aaa !important;
+  color: #fff !important;
+}
+
+.btn-outline-primary:active {  
+  background-color: #666 !important;
+  color: #fff !important;
+}
+
+.btn-checked:focus {
+  background-color: #aaa !important;
+}
+
+.btn-group > .btn-check:checked + .btn {
+  background-color: #aaa !important;
+}
