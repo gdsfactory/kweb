@@ -1,7 +1,4 @@
 
-//  TODO: shouldn't be explicit here ..
-// let url = 'ws://localhost:8765/ws';
-
 ws_url = ws_url.replace("http://","ws://");
 ws_url = ws_url.replace("https://","wss://");
 let url = ws_url + '/ws?' + "gds_file=" + gds_file + "&layer_props=" + layer_props;
@@ -84,7 +81,7 @@ function mouseEventToJSON(canvas, type, evt) {
 
 function sendMouseEvent(canvas, type, evt) {
 
-  if (socket.readyState == 1 /*OPEN*/) {
+  if (socket.readyState == WebSocket.OPEN /*OPEN*/) {
     let ev = mouseEventToJSON(canvas, type, evt);
     socket.send(JSON.stringify(ev));
   }
@@ -93,7 +90,7 @@ function sendMouseEvent(canvas, type, evt) {
 
 function sendWheelEvent(canvas, type, evt) {
 
-  if (socket.readyState == 1 /*OPEN*/) {
+  if (socket.readyState == WebSocket.OPEN /*OPEN*/) {
     let ev = mouseEventToJSON(canvas, type, evt);
     ev.dx = evt.deltaX;
     ev.dy = evt.deltaY;
@@ -101,6 +98,14 @@ function sendWheelEvent(canvas, type, evt) {
     socket.send(JSON.stringify(ev));
   }
 
+}
+
+function sendKeyEvent(canvas, type, evt) {
+  if (socket.readyState == WebSocket.OPEN) {
+    console.log(type)
+    console.log(evt.keyCode)
+    socket.send(JSON.stringify({ msg: type, k: evt.keyCode }));
+  }
 }
 
 let lastCanvasWidth = 0;
@@ -339,3 +344,12 @@ canvas.addEventListener('wheel', function (evt) {
   sendWheelEvent(canvas, "wheel", evt);
   evt.preventDefault();
 }, false);
+
+window.addEventListener("keydown", function(evt) {
+  // Check if the pressed key is the "Escape" key
+  if (evt.key === "Escape" || evt.keyCode === 27) {
+    evt.preventDefault();
+    console.log("Escape pressed!")
+    sendKeyEvent(canvas, "keydown", evt);
+  }
+});

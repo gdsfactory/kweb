@@ -163,16 +163,23 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
     ) -> None:
         function(db.DPoint(js["x"], js["y"]), self.buttons_from_js(js))
 
+    def key_event(
+        self, js: dict[str, int]
+    ) -> None:
+        match js["k"]:
+            case 27:
+                mode = self.layout_view.mode_name()
+                self.layout_view.switch_mode("select")
+                self.layout_view.switch_mode(mode)
+                
     async def reader(self, websocket: WebSocket, data: str) -> None:
         js = json.loads(data)
         msg = js["msg"]
-        print(f"{msg=}")
         match msg:
             case "quit":
                 return
             case "resize":
                 self.layout_view.resize(js["width"], js["height"])
-                print(js["width"], js["height"])
             case "clear-annotations":
                 self.layout_view.clear_annotations()
             case "select-ruler":
@@ -221,7 +228,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                 self.wheel_event(
                     self.layout_view.send_wheel_event, js  # type: ignore[arg-type]
                 )
-
-
-# server = LayoutViewServer(layout_url)
-# server.run()
+            case "keydown":
+                print(js)
+                self.key_event(js)
+                
