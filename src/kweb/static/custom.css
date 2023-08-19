@@ -45,3 +45,40 @@ body {
 .btn-group > .btn-check:checked + .btn {
   background-color: #aaa !important;
 }
+
+.nav-link {
+  color: #aaa;
+}
+
+.nav-link:hover {
+  color: #fff;
+}
+
+.nav-tabs {
+  border-color: #666;
+}
+
+.nav-link.active {
+  background-color: #666 !important;
+  border-color: #666 !important;
+  color: #fff !important;
+}
+
+.accordion-item {
+  color: #aaa !important;
+  background-color: #666 !important;
+}
+.accordion-button {
+  color: #aaa !important;
+  background-color: #666 !important;
+}
+
+.accordion-flush {
+  color: #aaa !important;
+  background-color: #666 !important;
+}
+.accordion{
+  color: #aaa;
+  background-color: #666;
+}
+

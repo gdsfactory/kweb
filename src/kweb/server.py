@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import asyncio
+import base64
 import json
 from collections.abc import Callable
 from pathlib import Path
@@ -12,10 +13,11 @@ import klayout.lay as lay
 from fastapi import WebSocket
 from starlette.endpoints import WebSocketEndpoint
 
-host = "localhost"
 port = 8765
+host = "localhost"
 
-CellDict: TypeAlias = dict[str, 'CellDict']
+CellDict: TypeAlias = dict[str, "CellDict"]
+
 
 class LayoutViewServerEndpoint(WebSocketEndpoint):
     encoding = "text"
@@ -56,26 +58,126 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
     def annotation_dump(self) -> list[str]:
         return [d[1] for d in self.layout_view.annotation_templates()]
 
-    def layer_dump(self) -> list[dict[str, object]]:
+    def layer_dump(
+        self,
+        iter: lay.LayerPropertiesIterator | None = None,
+        end_iter: lay.LayerPropertiesIterator | None = None,
+    ) -> list[dict[str, object]]:
+        if iter is None:
+            iter = self.layout_view.begin_layers()
         js = []
-        for layer in self.layout_view.each_layer():
-            js.append(
-                {
-                    "dp": layer.eff_dither_pattern(),
-                    "ls": layer.eff_line_style(),
-                    "c": layer.eff_fill_color(),
-                    "fc": layer.eff_frame_color(),
-                    "m": layer.marked,
-                    "s": layer.source,
-                    "t": layer.transparent,
-                    "va": layer.valid,
-                    "v": layer.visible,
-                    "w": layer.width,
-                    "x": layer.xfill,
-                    "name": layer.name,
-                    "id": layer.id(),
-                }
-            )
+        # for layer in self.layout_view.each_layer():
+        if end_iter:
+            while not iter.at_end() and not iter == end_iter:
+                layer = iter.current()
+                if layer.has_children():
+                    js.append(
+                        {
+                            "dp": layer.eff_dither_pattern(),
+                            "ls": layer.eff_line_style(),
+                            "c": layer.eff_fill_color(),
+                            "fc": layer.eff_frame_color(),
+                            "m": layer.marked,
+                            "s": layer.source,
+                            "t": layer.transparent,
+                            "va": layer.valid,
+                            "v": layer.visible,
+                            "w": layer.width,
+                            "x": layer.xfill,
+                            "name": layer.name,
+                            "id": layer.id(),
+                            "img": base64.b64encode(
+                                self.layout_view.icon_for_layer(
+                                    iter, 50, 25, 1
+                                ).to_png_data()
+                            ).decode("ASCII"),
+                            "children": self.layer_dump(
+                                iter=iter.dup().down_first_child(),
+                                end_iter=iter.dup().down_last_child(),
+                            ),
+                        }
+                    )
+                    iter.next_sibling(1)
+                else:
+                    js.append(
+                        {
+                            "dp": layer.eff_dither_pattern(),
+                            "ls": layer.eff_line_style(),
+                            "c": layer.eff_fill_color(),
+                            "fc": layer.eff_frame_color(),
+                            "m": layer.marked,
+                            "s": layer.source,
+                            "t": layer.transparent,
+                            "va": layer.valid,
+                            "v": layer.visible,
+                            "w": layer.width,
+                            "x": layer.xfill,
+                            "name": layer.name,
+                            "id": layer.id(),
+                            "img": base64.b64encode(
+                                self.layout_view.icon_for_layer(
+                                    iter, 50, 25, 1
+                                ).to_png_data()
+                            ).decode("ASCII"),
+                        }
+                    )
+                    iter.next()
+        else:
+            while not iter.at_end():
+                layer = iter.current()
+                if layer.has_children():
+                    js.append(
+                        {
+                            "dp": layer.eff_dither_pattern(),
+                            "ls": layer.eff_line_style(),
+                            "c": layer.eff_fill_color(),
+                            "fc": layer.eff_frame_color(),
+                            "m": layer.marked,
+                            "s": layer.source,
+                            "t": layer.transparent,
+                            "va": layer.valid,
+                            "v": layer.visible,
+                            "w": layer.width,
+                            "x": layer.xfill,
+                            "name": layer.name,
+                            "id": layer.id(),
+                            "img": base64.b64encode(
+                                self.layout_view.icon_for_layer(
+                                    iter, 50, 25, 1
+                                ).to_png_data()
+                            ).decode("ASCII"),
+                            "children": self.layer_dump(
+                                iter=iter.dup().down_first_child(),
+                                end_iter=iter.dup().down_last_child(),
+                            ),
+                        }
+                    )
+                    iter.next_sibling(1)
+                else:
+                    js.append(
+                        {
+                            "dp": layer.eff_dither_pattern(),
+                            "ls": layer.eff_line_style(),
+                            "c": layer.eff_fill_color(),
+                            "fc": layer.eff_frame_color(),
+                            "m": layer.marked,
+                            "s": layer.source,
+                            "t": layer.transparent,
+                            "va": layer.valid,
+                            "v": layer.visible,
+                            "w": layer.width,
+                            "x": layer.xfill,
+                            "name": layer.name,
+                            "id": layer.id(),
+                            "img": base64.b64encode(
+                                self.layout_view.icon_for_layer(
+                                    iter, 50, 25, 1
+                                ).to_png_data()
+                            ).decode("ASCII"),
+                        }
+                    )
+                    iter.next()
+
         return js
 
     def hierarchy_dump(self) -> dict[str, object]:
@@ -116,9 +218,9 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
         asyncio.create_task(self.timer(websocket))
 
     async def timer(self, websocket: WebSocket) -> None:
-        self.layout_view.on_image_updated_event = (
-            lambda: self.image_updated(websocket)  # type: ignore[attr-defined,assignment]
-        )
+        self.layout_view.on_image_updated_event = lambda: self.image_updated(
+            websocket
+        )  # type: ignore[attr-defined,assignment]
         while True:
             self.layout_view.timer()  # type: ignore[attr-defined]
             await asyncio.sleep(0.01)
@@ -163,15 +265,13 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
     ) -> None:
         function(db.DPoint(js["x"], js["y"]), self.buttons_from_js(js))
 
-    def key_event(
-        self, js: dict[str, int]
-    ) -> None:
+    def key_event(self, js: dict[str, int]) -> None:
         match js["k"]:
             case 27:
                 mode = self.layout_view.mode_name()
                 self.layout_view.switch_mode("select")
                 self.layout_view.switch_mode(mode)
-                
+
     async def reader(self, websocket: WebSocket, data: str) -> None:
         js = json.loads(data)
         msg = js["msg"]
@@ -195,9 +295,25 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
             case "layer-v":
                 id = js["id"]
                 vis = js["value"]
-                for layer in self.layout_view.each_layer():
+                iter = self.layout_view.begin_layers()
+                end = False
+                while not (iter.at_end() or end):
+                    layer = iter.current()
                     if layer.id() == id:
                         layer.visible = vis
+                        nit = iter.dup()
+                        nit.next_sibling(1)
+                        await websocket.send_text(
+                            json.dumps(
+                                {
+                                    "msg": "layer-v",
+                                    "layers": self.layer_dump(iter.dup(), end_iter=nit),
+                                }
+                            )
+                        )
+                        end = True
+                    iter.next()
+
             case "initialize":
                 self.layout_view.resize(js["width"], js["height"])
                 await websocket.send_text(json.dumps({"msg": "initialized"}))
@@ -230,4 +346,3 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                 )
             case "keydown":
                 self.key_event(js)
-                

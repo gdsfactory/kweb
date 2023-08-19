@@ -2,8 +2,6 @@
 ws_url = ws_url.replace("http://","ws://");
 ws_url = ws_url.replace("https://","wss://");
 let url = ws_url + '/ws?' + "gds_file=" + gds_file + "&layer_props=" + layer_props;
-console.log(url);
-console.log(layer_props);
 
 let canvas = document.getElementById("layout_canvas");
 let context = canvas.getContext("2d");
@@ -46,7 +44,6 @@ socket.onmessage = function(evt) {
       showLayers(js.layers);
       showMenu(js.modes, js.annotations);
     }
-
   } else if (initialized) {
 
     //  incoming blob messages are paint events
@@ -134,8 +131,6 @@ function resizeCanvas() {
       console.error(socket.readyState)
     }
 
-    let layers = document.getElementById("layers");
-    layers.style.height = h + "px";
   }
 }
 
@@ -219,11 +214,11 @@ function showMenu(modes, annotations) {
 //  Updates the layer list
 function showLayers(layers) {
 
-  let layerElement = document.getElementById("layers");
+  let layerElement = document.getElementById("layers-tab-pane");
   layerElement.childNodes = new Array();
 
-  let layerTable = document.createElement("table");
-  layerTable.className = "layer-table";
+  let layerTable = document.createElement("div");
+  layerTable.className = "container-fluid text-left px-0";
   layerElement.appendChild(layerTable)
 
   let cell;
@@ -231,69 +226,124 @@ function showLayers(layers) {
   let s;
   let visibilityCheckboxes = [];
 
-  let layerRow = document.createElement("tr");
-  layerRow.className = "layer-row-header";
+  appendLayers(layerTable, layers);
 
-  //  create a top level entry for resetting/setting all visible flags
-
-  cell = document.createElement("td");
-  cell.className = "layer-visible-cell";
-
-  inner = document.createElement("input");
-  inner.type = "checkbox";
-  inner.checked = true;
-  inner.onclick = function() {
-    let checked = this.checked;
-    visibilityCheckboxes.forEach(function(cb) {
-      cb.checked = checked;
-    });
-    socket.send(JSON.stringify({ msg: "layer-v-all", value: checked }));
-  };
-  cell.appendChild(inner);
-
-  layerRow.appendChild(cell);
-  layerTable.appendChild(layerRow);
-
+}
   //  create table rows for each layer
+function appendLayers(parentelement, layers) {
+  layers.forEach(function(l, i) {
 
-  layers.forEach(function(l) {
+    let layerRow = document.createElement("div");
+    layerRow.className = "row mx-0";
+    parentelement.appendChild(layerRow);
 
-    let layerRow = document.createElement("tr");
-    layerRow.className = "layer-row";
+    if ("children" in l) {
 
-    cell = document.createElement("td");
-    cell.className = "layer-visible-cell";
+      let accordion = document.createElement("div");
+      accordion.className = "accordion accordion-flush pe-0";
+      accordion.id = "layergroup-" + i;
+      layerRow.appendChild(accordion);
 
-    inner = document.createElement("input");
-    visibilityCheckboxes.push(inner);
-    inner.type = "checkbox";
-    inner.checked = l.v;
-    inner.onclick = function() {
-      socket.send(JSON.stringify({ msg: "layer-v", id: l.id, value: this.checked }));
-    };
-    cell.appendChild(inner);
+      accordion_item = document.createElement("div");
+      accordion_item.className = "accordion-item";
+      accordion.appendChild(accordion_item);
 
-    layerRow.appendChild(cell);
+      accordion_header = document.createElement("div");
+      accordion_header.className = "accordion-header d-flex flex-row";
+      accordion_item.appendChild(accordion_header);
 
-    cell = document.createElement("td");
-    cell.className = "layer-color-cell";
-    s = "border-style: solid; border-width: " + (l.w < 0 ? 1 : l.w) + "px; border-color: #" + (l.fc & 0xffffff).toString(16) + ";";
-    cell.style = s;
-    layerRow.appendChild(cell);
+      accordion_header_button = document.createElement("button");
+      accordion_header_button.className = "accordion-button p-0 flex-grow-1";
+      accordion_header_button.setAttribute("type", "button");
+      accordion_header_button.setAttribute("data-bs-toggle", "collapse");
+      accordion_header_button.setAttribute("data-bs-target", "#collapseGroup" + i);
+      accordion_header_button.setAttribute("aria-expanded", "true");
+      accordion_header_button.setAttribute("aria-controls", "collapseGroup" + i);
+      let img_cont = document.createElement("div");
+      img_cont.className = "col-auto p-0";
+      let layer_image = document.createElement("img");
+      layer_image.src = "data:image/png;base64," + l.img;
+      layer_image.style = "max-width: 100%;";
 
-    inner = document.createElement("div");
-    s = "width: 2rem; height: 1em;";
-    s += "margin: 1px;";
-    s += "background: #" + (l.c & 0xffffff).toString(16) + ";";
-    inner.style = s;
-    cell.appendChild(inner);
+      function click_layer_img() {
+        console.log(l)
+        l.visible = !Boolean(l.visible);
+        let ev = { msg: "layer-v", id: l.id, value: l.visible};
+        socket.send(JSON.stringify(ev));
+      }
 
-    cell = document.createElement("td");
-    cell.className = "layer-name-cell";
-    cell.textContent = (l.name != 0 ? l.name : l.s);
-    layerRow.appendChild(cell);
+      layer_image.addEventListener("click", click_layer_img);
+      
+      img_cont.appendChild(layer_image);
+      let layer_name = document.createElement("div");
+      layer_name.innerHTML = l.name;
+      layer_name.className = "col";
+      let layer_source = document.createElement("div");
+      layer_source.innerHTML = l.s;
+      layer_source.className = "col-auto";
+      accordion_row = document.createElement("div");
+      accordion_row.className = "row mx-0";
+      accordion_header.insertBefore(img_cont, accordion_header.firstChild);
+      accordion_row.appendChild(layer_name);
+      accordion_row.appendChild(layer_source);
+      accordion_header_button.appendChild(accordion_row);
 
-    layerTable.appendChild(layerRow);
+      accordion_header.appendChild(accordion_header_button);
+
+      accordion_collapse = document.createElement("div")
+      accordion_collapse.className = "accordion-collapse show";
+      accordion_collapse.setAttribute("data-bs-parent", "#" + accordion.id);
+      accordion_collapse.id = "collapseGroup" + i;
+      accordion_item.appendChild(accordion_collapse);
+
+      accordion_body = document.createElement("div");
+      accordion_body.className = "accordion-body p-0";
+      accordion_collapse.appendChild(accordion_body);
+
+      appendLayers(accordion_body, l.children);
+
+      
+    } else {
+      let img_cont = document.createElement("div");
+      img_cont.className = "col-auto p-0";
+      let layer_image = document.createElement("img");
+      layer_image.src = "data:image/png;base64," + l.img;
+      layer_image.style = "max-width: 100%;";
+      function click_layer_img() {
+        let ev = { msg: "layer-v", id: l.id, value: !l.visible};
+        socket.send(JSON.stringify(ev));
+        l.visible = !l.visible;
+      }
+
+      layer_image.addEventListener("click", click_layer_img);
+      img_cont.appendChild(layer_image);
+      let layer_name = document.createElement("div");
+      layer_name.innerHTML = l.name;
+      layer_name.className = "col";
+      let layer_source = document.createElement("div");
+      layer_source.innerHTML = l.s;
+      layer_source.className = "col-auto";
+      accordion_row = document.createElement("row");
+      accordion_row.className = "row mx-0";
+      accordion_row.appendChild(img_cont);
+      accordion_row.appendChild(layer_name);
+      accordion_row.appendChild(layer_source);
+      
+      let accordion = document.createElement("div");
+      accordion.className = "accordion accordion-flush pe-0";
+      accordion.id = "layergroup-" + i;
+      layerRow.appendChild(accordion);
+
+      accordion_item = document.createElement("div");
+      accordion_item.className = "accordion-item";
+      accordion.appendChild(accordion_item);
+
+      accordion_header = document.createElement("div");
+      accordion_header.className = "accordion-header";
+      accordion_item.appendChild(accordion_header)
+      accordion_header.appendChild(accordion_row);
+    
+    }
 
   });
 

@@ -46,15 +46,13 @@ async def gds_view_static_redirect(gds_name: str) -> RedirectResponse:
 
 @app.get("/gds/{gds_name:path}", response_class=HTMLResponse)
 async def gds_view_static(
-    request: Request, gds_name: str, layer_props: str = str(home_path)
+    request: Request, gds_name: str, layer_props: str | None = None,
 ) -> _TemplateResponse:
     gds_file = (edafiles / f"{gds_name}").with_suffix(".gds")
 
     exists = (
         gds_file.exists() and gds_file.is_file() and gds_file.stat().st_mode
     )
-
-    print(gds_file)
 
     if not exists:
         raise HTTPException(status_code=404, detail=f"No gds found with name \"{gds_name}\". It doesn't exist or is not accessible")
