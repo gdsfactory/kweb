@@ -14,31 +14,28 @@ from starlette.templating import _TemplateResponse
 from kweb import __version__ as version
 from kweb.server import LayoutViewServerEndpoint
 
+import os
+
+# module_path = Path(os.getenv("KWEB_EDAFILES", Path(__file__).parent.resolve()))
 module_path = Path(__file__).parent.absolute()
 home_path = Path.home() / ".gdsfactory" / "extra"
 home_path.mkdir(exist_ok=True, parents=True)
+
+local_gds_files = module_path / "gds_files"
+edafiles = Path(os.getenv("KWEB_FILESLOCATION", local_gds_files))
 
 app = FastAPI(routes=[WebSocketRoute("/gds/ws", endpoint=LayoutViewServerEndpoint)])
 app.mount("/static", StaticFiles(directory=module_path / "static"), name="static")
 templates = Jinja2Templates(directory=module_path / "templates")
 
-gds_files = module_path / "gds_files"
 
 @app.get("/")
 async def root(request: Request) -> _TemplateResponse:
-#     files_root = tmp
-#     paths_list = glob(str(files_root / "*.gds"))
-#     files_list = sorted(Path(gdsfile).name for gdsfile in paths_list)
-#     files_metadata = [
-#         {"name": file_name, "url": f"gds/{file_name}"} for file_name in files_list
-#     ]
     return templates.TemplateResponse(
         "file_browser.html",
         {
             "request": request,
             "message": "Welcome to kweb visualizer",
-            # "files_root": files_root,
-            # "files_metadata": files_metadata,
         },
     )
 
@@ -73,7 +70,7 @@ async def gds_view_static_redirect(gds_name: str) -> RedirectResponse:
 async def gds_view_static(
     request: Request, gds_name: str, layer_props: str = str(home_path)
 ) -> _TemplateResponse:
-    gds_file = (gds_files / f"{gds_name}").with_suffix(".gds")
+    gds_file = (edafiles / f"{gds_name}").with_suffix(".gds")
 
     url = str(
         request.url.scheme
