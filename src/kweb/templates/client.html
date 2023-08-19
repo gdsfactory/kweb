@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>KWeb GDS File Viewer</title>
-    <link rel="stylesheet" href={{ url_for("static", path="/bootstrap/bootstrap.min.css")}}></link>
-    <link rel="stylesheet" href={{ url_for("static", path="/custom.css")}}></link>
+    <link rel="stylesheet" href={{ url_for("kweb_static", path="/bootstrap/bootstrap.min.css")}}></link>
+    <link rel="stylesheet" href={{ url_for("kweb_static", path="/custom.css")}}></link>
     <link rel="icon" type="image/png" href="/static/img/kweb.png"></link>
   </head>
   <body>
@@ -25,6 +25,6 @@
     </div>
 
     <script>var ws_url="{{ url }}"; var layer_props="{{ layer_props }}"; var gds_file="{{ gds_file }}"</script>
-    <script type="text/javascript" src="{{ url_for("static", path="client.js") }}"></script>
+    <script type="text/javascript" src="{{ url_for("kweb_static", path="client.js") }}"></script>
   </body>
 </html>

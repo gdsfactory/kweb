@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -25,9 +26,8 @@ local_gds_files = module_path / "gds_files"
 edafiles = Path(os.getenv("KWEB_FILESLOCATION", local_gds_files))
 
 app = FastAPI(routes=[WebSocketRoute("/gds/ws", endpoint=LayoutViewServerEndpoint)])
-app.mount("/static", StaticFiles(directory=module_path / "static"), name="static")
+app.mount("/static", StaticFiles(directory=module_path / "static"), name="kweb_static")
 templates = Jinja2Templates(directory=module_path / "templates")
-
 
 @app.get("/")
 async def root(request: Request) -> _TemplateResponse:
@@ -40,44 +40,41 @@ async def root(request: Request) -> _TemplateResponse:
     )
 
 
-@app.get("/gds", response_class=HTMLResponse)
-async def gds_view(
-    request: Request, gds_file: str, layer_props: str = str(home_path)
-) -> _TemplateResponse:
-    url = str(
-        request.url.scheme
-        + "://"
-        + (request.url.hostname or "localhost")
-        + ":"
-        + str(request.url.port)
-        + "/gds"
-    )
-    return templates.TemplateResponse(
-        "client.html",
-        {
-            "request": request,
-            "url": url,
-            "gds_file": gds_file,
-            "layer_props": layer_props,
-        },
-    )
-
 @app.get("/gds/{gds_name}.gds")
 async def gds_view_static_redirect(gds_name: str) -> RedirectResponse:
     return RedirectResponse(f"/gds/{gds_name}")
 
-@app.get("/gds/{gds_name}", response_class=HTMLResponse)
+@app.get("/gds/{gds_name:path}", response_class=HTMLResponse)
 async def gds_view_static(
     request: Request, gds_name: str, layer_props: str = str(home_path)
 ) -> _TemplateResponse:
     gds_file = (edafiles / f"{gds_name}").with_suffix(".gds")
 
-    url = str(
-        request.url.scheme
-        + "://"
+    exists = (
+        gds_file.exists() and gds_file.is_file() and gds_file.stat().st_mode
+    )
+
+    print(gds_file)
+
+    if not exists:
+        raise HTTPException(status_code=404, detail=f"No gds found with name \"{gds_name}\". It doesn't exist or is not accessible")
+
+    root_path = request.scope["root_path"]
+
+    match request.url.scheme:
+        case "https":
+            ws_scheme = "wss://"
+        case "http":
+            ws_scheme = "ws://"
+        case other:
+            raise HTTPException(status_code=406, detail=f"Unknown scheme {other}")
+
+    url = (
+        ws_scheme
         + (request.url.hostname or "localhost")
         + ":"
         + str(request.url.port)
+        + root_path
         + "/gds"
     )
 

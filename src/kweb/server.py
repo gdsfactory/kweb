@@ -229,6 +229,5 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                     self.layout_view.send_wheel_event, js  # type: ignore[arg-type]
                 )
             case "keydown":
-                print(js)
                 self.key_event(js)
                 
