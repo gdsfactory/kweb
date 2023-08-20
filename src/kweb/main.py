@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.exceptions import HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -13,29 +13,56 @@ from starlette.templating import _TemplateResponse
 from kweb import __version__ as version
 from kweb.server import LayoutViewServerEndpoint
 
-# module_path = Path(os.getenv("KWEB_EDAFILES", Path(__file__).parent.resolve()))
 module_path = Path(__file__).parent.absolute()
-home_path = Path.home() / ".gdsfactory" / "extra"
-home_path.mkdir(exist_ok=True, parents=True)
 
-local_gds_files = module_path / "gds_files"
-edafiles = Path(os.getenv("KWEB_FILESLOCATION", local_gds_files))
 
-app = FastAPI(routes=[WebSocketRoute("/gds/ws", endpoint=LayoutViewServerEndpoint)])
-app.mount("/static", StaticFiles(directory=module_path / "static"), name="kweb_static")
+# edafiles = os.getenv("KWEB_FILESLOCATION"))
+router = APIRouter()
 templates = Jinja2Templates(directory=module_path / "templates")
 
+edafiles: Path | None = None
 
-@app.get("/gds/{gds_name:path}", response_class=HTMLResponse)
+
+def get_app(files_location: str | Path | None = None) -> FastAPI:
+    if files_location is None:
+        envedafiles = os.getenv("KWEB_FILESLOCATION")
+        if envedafiles is None:
+            raise RuntimeError(
+                "A filels location must be set, either via "
+                "kweb.main.get_app(path) as a string or Path object. "
+                'Alternatively the env variable "KWEB_FILESLOCATION"'
+                " can be set with the path"
+            )
+        files_location = Path(envedafiles)
+
+    global edafiles
+    edafiles = Path(files_location)
+
+    app = FastAPI(routes=[WebSocketRoute("/gds/ws", endpoint=LayoutViewServerEndpoint)])
+    app.mount(
+        "/static", StaticFiles(directory=module_path / "static"), name="kweb_static"
+    )
+    app.include_router(router)
+
+    return app
+
+
+@router.get("/gds/{gds_name:path}", response_class=HTMLResponse)
 async def gds_view_static(
     request: Request,
     gds_name: str,
     layer_props: str | None = None,
     cell: str | None = None,
 ) -> _TemplateResponse:
-    gds_file = (edafiles / f"{gds_name}").with_suffix(".gds")
+    gds_file = (edafiles / f"{gds_name}").with_suffix(  # type: ignore[misc, operator]
+        ".gds"
+    )
 
-    exists = gds_file.exists() and gds_file.is_file() and gds_file.stat().st_mode
+    exists = (
+        gds_file.exists()
+        and gds_file.is_file()
+        and gds_file.stat().st_mode  # type: ignore[misc, operator]
+    )
 
     if not exists:
         raise HTTPException(
@@ -79,10 +106,12 @@ async def gds_view_static(
     )
 
 
-@app.get("/status")
+@router.get("/status")
 async def status() -> dict[str, Any]:
     return {"server": "kweb", "version": version}
 
+
+app = get_app()
 
 if __name__ == "__main__":
     import uvicorn
