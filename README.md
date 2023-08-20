@@ -1,6 +1,6 @@
 # kweb 0.1.1
 
-KLayout Web Viewer ![demo](https://i.imgur.com/HPvePvX.png)
+KLayout Web Viewer ![demo](docs/_static/kweb.png)
 
 Based on https://github.com/klayoutmatthias/canvas2canvas
 
@@ -26,6 +26,9 @@ Install the necessary dependecies
 
 `make install`
 
+## Set a folder for kweb to use when looking for gds files
+
+`export KWEB_FILESLOCATION=/path/to/folder/with/file.gds`
 
 ## Run
 
@@ -33,4 +36,4 @@ Install the necessary dependecies
 
 `make run`
 
-Copy the link http://127.0.0.1:8000/gds/wg to your browser to open the waveguide example
+Copy the link http://127.0.0.1:8000/gds/file.gds (or http://localhost:8000/gds/file.gds also works) to your browser to open the waveguide example

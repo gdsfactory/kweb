@@ -128,3 +128,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+#css/bootstrap/npm
+package-lock.json
+package.json
+node_modules

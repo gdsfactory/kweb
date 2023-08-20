@@ -125,3 +125,10 @@ ul, #myUL {
 .active {
   display: block;
 }
+
+
+.canvas-container canvas {
+  object-fit: contain;
+  width: 80%;
+  height: 80%;
+}

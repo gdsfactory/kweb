@@ -1,28 +1,35 @@
 
-//  TODO: shouldn't be explicit here ..
-// let url = 'ws://localhost:8765/ws';
-
 ws_url = ws_url.replace("http://","ws://");
 ws_url = ws_url.replace("https://","wss://");
-let url = ws_url + '/ws?' + "gds_file=" + gds_file + "&layer_props=" + layer_props;
-console.log(url);
-console.log(layer_props);
 
-var canvas = document.getElementById("layout_canvas");
-var context = canvas.getContext("2d");
+let url;
+if (cell) {
+  url = ws_url + '/ws?' + "gds_file=" + gds_file + "&layer_props=" + layer_props + "&cell=" + cell;
+} else {
+  url = ws_url + '/ws?' + "gds_file=" + gds_file + "&layer_props=" + layer_props;
+}
 
-var message = document.getElementById("message");
+let canvas = document.getElementById("layout_canvas");
+let context = canvas.getContext("2d");
+
+let message = document.getElementById("message");
 
 let socket = new WebSocket(url);
 socket.binaryType = "blob";
-var initialized = false;
+let initialized = false;
 
-//  Installs a handler called when the connection is established
-socket.onopen = function(evt) {
+async function initializeWebSocket() {
+  await new Promise((resolve) => {
+    //  Installs a handler called when the connection is established
+    socket.onopen = function(evt) {
+      let ev = { msg: "initialize", width: canvas.width, height: canvas.height };
+      socket.send(JSON.stringify(ev));
+      resolve(); // Resolve the promise when the WebSocket is ready
+    };
+  });
 
-  var ev = { msg: "initialize", width: canvas.width, height: canvas.height };
-  socket.send(JSON.stringify(ev));
-
+  // Call resizeCanvas the first time
+  resizeCanvas();
 }
 
 //  Installs a handler for the messages delivered by the web socket
@@ -31,22 +38,16 @@ socket.onmessage = function(evt) {
   let data = evt.data;
   if (typeof(data) === "string") {
 
-    //  For debugging:
-    //  message.textContent = data;
-
-    //  incoming messages are JSON objects
-    console.log(data)
     js = JSON.parse(data);
     if (js.msg == "initialized") {
       initialized = true;
     } else if (js.msg == "loaded") {
       showLayers(js.layers);
       showMenu(js.modes, js.annotations);
-      if(js.hierarchy){
-        showHierarchy(js.hierarchy);
-      }
+      showCells(js.hierarchy, js.ci)
+    } else if (js.msg == "layer-u") {
+      updateLayerImages(js.layers)
     }
-
   } else if (initialized) {
 
     //  incoming blob messages are paint events
@@ -62,10 +63,10 @@ socket.onclose = evt => console.log(`Closed ${evt.code}`);
 
 function mouseEventToJSON(canvas, type, evt) {
 
-  var rect = canvas.getBoundingClientRect();
-  var x = evt.clientX - rect.left;
-  var y = evt.clientY - rect.top;
-  var keys = 0;
+  let rect = canvas.getBoundingClientRect();
+  let x = evt.clientX - rect.left;
+  let y = evt.clientY - rect.top;
+  let keys = 0;
   if (evt.shiftKey) {
     keys += 1;
   }
@@ -81,8 +82,8 @@ function mouseEventToJSON(canvas, type, evt) {
 
 function sendMouseEvent(canvas, type, evt) {
 
-  if (socket.readyState == 1 /*OPEN*/) {
-    var ev = mouseEventToJSON(canvas, type, evt);
+  if (socket.readyState == WebSocket.OPEN /*OPEN*/) {
+    let ev = mouseEventToJSON(canvas, type, evt);
     socket.send(JSON.stringify(ev));
   }
 
@@ -90,8 +91,8 @@ function sendMouseEvent(canvas, type, evt) {
 
 function sendWheelEvent(canvas, type, evt) {
 
-  if (socket.readyState == 1 /*OPEN*/) {
-    var ev = mouseEventToJSON(canvas, type, evt);
+  if (socket.readyState == WebSocket.OPEN /*OPEN*/) {
+    let ev = mouseEventToJSON(canvas, type, evt);
     ev.dx = evt.deltaX;
     ev.dy = evt.deltaY;
     ev.dm = evt.deltaMode;
@@ -100,126 +101,116 @@ function sendWheelEvent(canvas, type, evt) {
 
 }
 
-//  HTML5 does not have a resize event, so we need to poll
-//  to generate events for the canvas resize
+function sendKeyEvent(canvas, type, evt) {
+  if (socket.readyState == WebSocket.OPEN) {
+    socket.send(JSON.stringify({ msg: type, k: evt.keyCode }));
+  }
+}
 
-var lastCanvasWidth = 0;
-var lastCanvasHeight = 0;
+let lastCanvasWidth = 0;
+let lastCanvasHeight = 0;
 
-setInterval(function() {
+function resizeCanvas() {
+  let view = document.getElementById('layout-view');
+  let w = canvas.clientWidth;
+  let h = canvas.clientHeight;
 
-  var view = document.getElementById('layout-view');
-  var w = view.clientWidth;
-  var h = view.clientHeight;
+  view.height = view.parentElement.clientHeight;
 
   if (lastCanvasWidth !== w || lastCanvasHeight !== h) {
-
-    //  this avoids flicker:
-
-    var tempCanvas = document.createElement('canvas');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    var tempContext = tempCanvas.getContext("2d");
-    tempContext.drawImage(context.canvas, 0, 0);
-
     lastCanvasWidth = w;
     lastCanvasHeight = h;
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
 
-    context.drawImage(tempContext.canvas, 0, 0);
+    canvas.width = w;
+    canvas.height = h;
 
-    socket.send(JSON.stringify({ msg: "resize", width: canvas.width, height: canvas.height }));
-
-    //  resizes the layer list:
-
-    let layers = document.getElementById("layers");
-
-    var padding = 10; //  padding in pixels
-    layers.style.height = (h - 2 * padding) + "px";
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ msg: "resize", width: w, height: h }));
+    }
+    else if (socket.readyState === WebSocket.CONNECTING){
+    }
+    else {
+      console.error(socket.readyState)
+    }
 
   }
+}
 
-}, 10)
+initializeWebSocket();
+
+setInterval(resizeCanvas, 10); // Call resizeCanvas every 10ms
+
+
+window.addEventListener("resize", function() {
+  if (initialized) {
+    resizeCanvas();
+  }
+});
 
 //  Updates the Menu
 function showMenu(modes, annotations) {
 
-  var modeElement = document.getElementById("modes");
+  let modeElement = document.getElementById("modes");
   modeElement.childNodes = new Array();
 
-  var modeTable = document.createElement("table");
-  modeTable.className = "modes-table";
-  modeElement.appendChild(modeTable)
-
-  var modeRow = document.createElement("tr");
-  modeRow.className = "mode-row-header";
+  let modeRow = document.createElement("div");
+  modeRow.className = "btn-group";
+  modeRow.setAttribute("role", "group");
+  modeRow.role = "group";
+  modeRow.aria_label = "Layout Mode Selection"
   modeRow.id = "mode-row";
-  modeTable.appendChild(modeRow)
+  modeRow.childNodes = new Array();
+  modeElement.appendChild(modeRow);
 
-  var cell;
-  var inner;
+  modes.forEach(function(m, i) {
 
-  modes.forEach(function(m) {
 
-    cell = document.createElement("td");
-    cell.className = "mode-cell";
-
-    var inner = document.createElement("input");
+    let inner = document.createElement("input");
     inner.value = m;
-    inner.type = "button";
-    inner.className = "unchecked";
+    inner.type = "radio";
+    inner.className = "btn-check";
+    inner.id = "btnradio" + m;
+    inner.setAttribute("name", "radiomode");
+    if (i==0) {
+      inner.setAttribute("checked", "");
+    }
     inner.onclick = function() {
-      var modeRow = document.getElementById("mode-row");
-      modeRow.childNodes.forEach(function (e) {
-        e.firstChild.className = "unchecked";
-      });
-      inner.className = "checked";
       socket.send(JSON.stringify({ msg: "select-mode", value: m }));
     };
+    let innerlabel = document.createElement("label");
+    innerlabel.textContent = m;
+    innerlabel.className = "btn btn-outline-primary";
+    innerlabel.setAttribute("for", "btnradio" + m);
 
-    cell.appendChild(inner);
-    modeRow.appendChild(cell);
+    modeRow.appendChild(inner);
+    modeRow.appendChild(innerlabel);
 
   });
 
-  var menuElement = document.getElementById("menu");
+  let menuElement = document.getElementById("menu");
 
-  var menuTable = document.createElement("table");
-  menuTable.className = "menu-table";
-  menuElement.appendChild(menuTable)
-
-  var menuRow = document.createElement("tr");
-  menuRow.className = "menu-row-header";
-  menuTable.appendChild(menuRow)
-
-  cell = document.createElement("td");
-  cell.className = "menu-cell";
-  menuRow.appendChild(cell);
-
-  var rulersSelect = document.createElement("select");
-  rulersSelect.onchange = function() {
-    socket.send(JSON.stringify({ msg: "select-ruler", value: rulersSelect.selectedIndex }));
-  };
-  cell.appendChild(rulersSelect);
-
-  cell = document.createElement("td");
-  cell.className = "menu-cell";
-  menuRow.appendChild(cell);
-
-  var clearRulers = document.createElement("input");
-  clearRulers.value = "Clear Rulers";
-  clearRulers.type = "button";
+  let clearRulers = document.createElement("button");
+  clearRulers.textContent = "Clear Rulers";
+  clearRulers.className = "col-auto btn btn-primary me-2";
+  clearRulers.setAttribute("type", "button");
   clearRulers.onclick = function() {
     socket.send(JSON.stringify({ msg: "clear-annotations" }));
   };
-  cell.appendChild(clearRulers);
+  menuElement.appendChild(clearRulers);
+  let zoomFit= document.createElement("button");
+  zoomFit.textContent = "Zoom Fit";
+  zoomFit.className = "col-auto btn btn-primary";
+  zoomFit.setAttribute("type", "button");
+  zoomFit.onclick = function() {
+    socket.send(JSON.stringify({ msg: "zoom-f" }));
+  };
+  menuElement.appendChild(zoomFit);
 
-  var index = 0;
+  let index = 0;
 
   annotations.forEach(function(a) {
 
-    var option = document.createElement("option");
+    let option = document.createElement("option");
     option.value = index;
     option.text = a;
 
@@ -230,132 +221,338 @@ function showMenu(modes, annotations) {
   });
 }
 
+function selectCell(cell_index) {
+  socket.send(JSON.stringify(
+    {
+      "msg": "ci-s",
+      "ci": cell_index,
+      "zoom-fit": true,
+    }
+  ))
+}
+
+function selectCellByName(cell_name) {
+  let currentURL = new URL(window.location.href);
+  currentURL.searchParams.set("cell", cell_name)
+  window.history.replaceState({}, '', currentURL.toString())
+  socket.send(JSON.stringify(
+    {
+      "msg": "cell-s",
+      "cell": cell_name,
+      "zoom-fit": true,
+    }
+  ))
+}
+
 //  Updates the layer list
-function showLayers(layers) {
+function showCells(cells, current_index) {
 
-  var layerElement = document.getElementById("layers");
-  layerElement.childNodes = new Array();
+  let layerElement = document.getElementById("cells-tab-pane");
+  layerElement.replaceChildren();
+  appendCells(layerElement, cells, current_index)
 
-  var layerTable = document.createElement("table");
-  layerTable.className = "layer-table";
-  layerElement.appendChild(layerTable)
-
-  var cell;
-  var inner;
-  var s;
-  var visibilityCheckboxes = [];
-
-  var layerRow = document.createElement("tr");
-  layerRow.className = "layer-row-header";
-
-  //  create a top level entry for resetting/setting all visible flags
-
-  cell = document.createElement("td");
-  cell.className = "layer-visible-cell";
-
-  inner = document.createElement("input");
-  inner.type = "checkbox";
-  inner.checked = true;
-  inner.onclick = function() {
-    var checked = this.checked;
-    visibilityCheckboxes.forEach(function(cb) {
-      cb.checked = checked;
-    });
-    socket.send(JSON.stringify({ msg: "layer-v-all", value: checked }));
-  };
-  cell.appendChild(inner);
-
-  layerRow.appendChild(cell);
-  layerTable.appendChild(layerRow);
+}
 
   //  create table rows for each layer
+function appendCells(parentelement, cells, current_index, addpadding=false) {
 
-  layers.forEach(function(l) {
+  let lastelement = null;
 
-    var layerRow = document.createElement("tr");
-    layerRow.className = "layer-row";
+  cells.forEach(function(c, i) {
 
-    cell = document.createElement("td");
-    cell.className = "layer-visible-cell";
+    let cellRow = document.createElement("div");
+    cellRow.className = "row mx-0";
+    parentelement.appendChild(cellRow);
+    if (c.children.length > 0) {
 
-    inner = document.createElement("input");
-    visibilityCheckboxes.push(inner);
-    inner.type = "checkbox";
-    inner.checked = l.v;
-    inner.onclick = function() {
-      socket.send(JSON.stringify({ msg: "layer-v", id: l.id, value: this.checked }));
-    };
-    cell.appendChild(inner);
+      let accordion = document.createElement("div");
 
-    layerRow.appendChild(cell);
+      if (addpaddings){
+        accordion.className = "accordion accordion-flush px-2";
+      } else {
+        accordion.className = "accordion accordion-flush ps-2 pe-0";
+      }
+      accordion.id = "cellgroup-" + c.id;
 
-    cell = document.createElement("td");
-    cell.className = "layer-color-cell";
-    s = "border-style: solid; border-width: " + (l.w < 0 ? 1 : l.w) + "px; border-color: #" + (l.fc & 0xffffff).toString(16) + ";";
-    cell.style = s;
-    layerRow.appendChild(cell);
 
-    inner = document.createElement("div");
-    s = "width: 2rem; height: 1em;";
-    s += "margin: 1px;";
-    s += "background: #" + (l.c & 0xffffff).toString(16) + ";";
-    inner.style = s;
-    cell.appendChild(inner);
+      cellRow.appendChild(accordion);
 
-    cell = document.createElement("td");
-    cell.className = "layer-name-cell";
-    cell.textContent = (l.name != 0 ? l.name : l.s);
-    layerRow.appendChild(cell);
+      accordion_item = document.createElement("div");
+      accordion_item.className = "accordion-item";
+      accordion.appendChild(accordion_item);
 
-    layerTable.appendChild(layerRow);
+      accordion_header = document.createElement("div");
+      accordion_header.className = "accordion-header d-flex flex-row";
+      accordion_item.appendChild(accordion_header);
+
+      accordion_header_button = document.createElement("button");
+      accordion_header_button.className = "accordion-button p-0 w-auto border-bottom";
+      accordion_header_button.setAttribute("type", "button");
+      accordion_header_button.setAttribute("data-bs-toggle", "collapse");
+      accordion_header_button.setAttribute("data-bs-target", "#collapseGroup" + c.id);
+      accordion_header_button.setAttribute("aria-expanded", "true");
+      accordion_header_button.setAttribute("aria-controls", "collapseGroup" + c.id);
+      let cell_name_button = document.createElement("input");
+      cell_name_button.className = "btn-check";
+      cell_name_button.setAttribute("type", "radio");
+      cell_name_button.setAttribute("name", "option-base");
+      cell_name_button.id = "cell-" + c.id;
+      cell_name_button.setAttribute("autocomplete", "off");
+      if (c.id == current_index) {
+        cell_name_button.setAttribute("checked", "")
+      }
+      cell_name_button.addEventListener("change", function(){
+        selectCellByName(c.name);
+      });
+      let cell_name = document.createElement("label");
+      cell_name.innerHTML = c.name;
+      cell_name.className = "btn btn-dark w-100 text-start p-0";
+      cell_name.setAttribute("for", "cell-" + c.id);
+      accordion_row = document.createElement("div");
+      accordion_row.className = "mx-0 border-bottom flex-grow-1";
+      accordion_row.appendChild(cell_name_button);
+      accordion_row.appendChild(cell_name);
+      accordion_header.appendChild(accordion_row);
+
+      accordion_header.appendChild(accordion_header_button);
+
+      accordion_collapse = document.createElement("div")
+      accordion_collapse.className = "accordion-collapse show";
+      accordion_collapse.setAttribute("data-bs-parent", "#" + accordion.id);
+      accordion_collapse.id = "collapseGroup" + c.id;
+      accordion_item.appendChild(accordion_collapse);
+
+      accordion_body = document.createElement("div");
+      accordion_body.className = "accordion-body p-0";
+      accordion_collapse.appendChild(accordion_body);
+
+      appendCells(accordion_body, c.children, current_index, true);
+      lastelement = accordion;
+
+    } else {
+      let cell_name_button = document.createElement("input");
+      cell_name_button.className = "btn-check";
+      cell_name_button.setAttribute("type", "radio");
+      cell_name_button.setAttribute("name", "option-base");
+      cell_name_button.id = "cell-" + c.id;
+      cell_name_button.setAttribute("autocomplete", "off");
+      cell_name_button.addEventListener("change", function(){
+        selectCellByName(c.name);
+      });
+      if (c.id == current_index) {
+        cell_name_button.setAttribute("checked", "")
+      }
+      let cell_name = document.createElement("label");
+      cell_name.innerHTML = c.name;
+      cell_name.className = "btn btn-dark text-start p-0";
+      cell_name.setAttribute("for", "cell-" + c.id);
+      accordion_row = document.createElement("div");
+      accordion_row = document.createElement("row");
+      accordion_row.className = "row mx-0";
+      accordion_row.appendChild(cell_name_button);
+      accordion_row.appendChild(cell_name);
+
+      let accordion = document.createElement("div");
+      if (addpaddings) {
+        accordion.className = "accordion accordion-flush ps-2 pe-0";
+      } else {
+        accordion.className = "accordion accordion-flush px-0";
+      }
+      accordion.id = "cellgroup-" + c.id;
+      cellRow.appendChild(accordion);
+
+      accordion_item = document.createElement("div");
+      accordion_item.className = "accordion-item";
+      accordion.appendChild(accordion_item);
+
+      accordion_header = document.createElement("div");
+      accordion_header.className = "accordion-header";
+      accordion_item.appendChild(accordion_header)
+      accordion_header.appendChild(accordion_row);
+
+      lastelement = accordion
+    }
 
   });
 
+  if (addpaddings && lastelement) {
+     lastelement.classList.add("pb-2");
+  }
 }
+//  Updates the layer list
+function showLayers(layers) {
+
+  let layerElement = document.getElementById("layers-tab-pane");
+  let layerButtons = document.getElementById("layer-buttons");
+
+  let layerSwitch = document.getElementById("layerEmptySwitch");
+
+  let layerTable = document.getElementById("table-layer") || document.createElement("div");
+  layerTable.id = "table-layer";
+  layerTable.className = "container-fluid text-left px-0 pb-2";
+  layerElement.replaceChildren(layerButtons, layerTable);
+
+  appendLayers(layerTable, layers, addempty=!layerSwitch.checked, addpaddings=true);
+  layerSwitch.addEventListener("change", function() {
+    layerTable.replaceChildren();
+    appendLayers(layerTable, layers, addempty=!this.checked, addpaddings=true);
+  });
+
+}
+  //  create table rows for each layer
+function appendLayers(parentelement, layers, addempty=false, addpaddings = false) {
+
+  let lastelement = null;
+
+  layers.forEach(function(l, i) {
+
+    if (addempty || !l.empty) {
+
+      let layerRow = document.createElement("div");
+      layerRow.className = "row mx-0";
+      parentelement.appendChild(layerRow);
+      if ("children" in l) {
+
+        let accordion = document.createElement("div");
+
+        if (addpaddings){
+          accordion.className = "accordion accordion-flush px-2";
+        } else {
+          accordion.className = "accordion accordion-flush ps-2 pe-0";
+        }
+        accordion.id = "layergroup-" + l.id;
 
 
-function showHierarchy(hierarchy) {
+        layerRow.appendChild(accordion);
 
-  var hierarchyElement = document.getElementById("hierarchy");
-  hierarchyElement.childNodes = new Array();
+        accordion_item = document.createElement("div");
+        accordion_item.className = "accordion-item";
+        accordion.appendChild(accordion_item);
 
-  var hierarchyUL = document.createElement("ul");
-  hierarchyUL.className = "hierarchy-ul";
-  hierarchyElement.appendChild(hierarchyUL)
+        accordion_header = document.createElement("div");
+        accordion_header.className = "accordion-header d-flex flex-row";
+        accordion_item.appendChild(accordion_header);
 
-  function addToUL(hierarchy, ul){
-    for (const [key, value] of Object.entries(hierarchy)) {
-      console.log(`${key}: ${value}`);
-      var li = document.createElement("li");
-      ul.appendChild(li);
-      if(typeof value === 'object'){ //further hiera
-        caret = document.createElement("span");
-        caret.className = "caret";
-        caret.innerText = key;
-        sub_ul = document.createElement("ul");
-        sub_ul.className = "nested"
-        li.appendChild(caret)
-        li.appendChild(sub_ul)
-        addToUL(value, sub_ul)
+        accordion_header_button = document.createElement("button");
+        accordion_header_button.className = "accordion-button p-0 flex-grow-1";
+        accordion_header_button.setAttribute("type", "button");
+        accordion_header_button.setAttribute("data-bs-toggle", "collapse");
+        accordion_header_button.setAttribute("data-bs-target", "#collapseGroup" + l.id);
+        accordion_header_button.setAttribute("aria-expanded", "true");
+        accordion_header_button.setAttribute("aria-controls", "collapseGroup" + l.id);
+        let img_cont = document.createElement("div");
+        img_cont.className = "col-auto p-0";
+        let layer_image = document.createElement("img");
+        layer_image.src = "data:image/png;base64," + l.img;
+        layer_image.style = "max-width: 100%;";
+        layer_image.id  = "layer-img-" + l.id;
+        layer_image.className = "layer-img";
+
+        function click_layer_img() {
+          l.v = !l.v;
+          let ev = { msg: "layer-v", id: l.id, value: l.v};
+          socket.send(JSON.stringify(ev));
+        }
+
+        layer_image.addEventListener("click", click_layer_img);
+
+        img_cont.appendChild(layer_image);
+        let layer_name = document.createElement("div");
+        layer_name.innerHTML = l.name;
+        layer_name.className = "col";
+        let layer_source = document.createElement("div");
+        layer_source.innerHTML = l.s;
+        layer_source.className = "col-auto";
+        accordion_row = document.createElement("div");
+        accordion_row.className = "row mx-0";
+        accordion_header.insertBefore(img_cont, accordion_header.firstChild);
+        accordion_row.appendChild(layer_name);
+        accordion_row.appendChild(layer_source);
+        accordion_header_button.appendChild(accordion_row);
+
+        accordion_header.appendChild(accordion_header_button);
+
+        accordion_collapse = document.createElement("div")
+        accordion_collapse.className = "accordion-collapse show";
+        accordion_collapse.setAttribute("data-bs-parent", "#" + accordion.id);
+        accordion_collapse.id = "collapseGroup" + l.id;
+        accordion_item.appendChild(accordion_collapse);
+
+        accordion_body = document.createElement("div");
+        accordion_body.className = "accordion-body p-0";
+        accordion_collapse.appendChild(accordion_body);
+
+        appendLayers(accordion_body, l.children, addempty=addempty);
+        lastelement = accordion;
+
       } else {
-        li.innerText = key;
+        let img_cont = document.createElement("div");
+        img_cont.className = "col-auto p-0";
+        let layer_image = document.createElement("img");
+        layer_image.src = "data:image/png;base64," + l.img;
+        layer_image.style = "max-width: 100%;";
+        layer_image.id  = "layer-img-" + l.id;
+        layer_image.className = "layer-img";
+        function click_layer_img() {
+          l.v = !l.v;
+          let ev = { msg: "layer-v", id: l.id, value: l.v};
+          socket.send(JSON.stringify(ev));
+        }
+
+        layer_image.addEventListener("click", click_layer_img);
+        img_cont.appendChild(layer_image);
+        let layer_name = document.createElement("div");
+        layer_name.innerHTML = l.name;
+        layer_name.className = "col";
+        let layer_source = document.createElement("div");
+        layer_source.innerHTML = l.s;
+        layer_source.className = "col-auto pe-0";
+        accordion_row = document.createElement("row");
+        accordion_row.className = "row mx-0";
+        accordion_row.appendChild(img_cont);
+        accordion_row.appendChild(layer_name);
+        accordion_row.appendChild(layer_source);
+
+        let accordion = document.createElement("div");
+        if (addpaddings) {
+          accordion.className = "accordion accordion-flush px-2";
+        } else {
+          accordion.className = "accordion accordion-flush ps-2 pe-0";
+        }
+        accordion.id = "layergroup-" + l.id;
+        layerRow.appendChild(accordion);
+
+        accordion_item = document.createElement("div");
+        accordion_item.className = "accordion-item";
+        accordion.appendChild(accordion_item);
+
+        accordion_header = document.createElement("div");
+        accordion_header.className = "accordion-header";
+        accordion_item.appendChild(accordion_header)
+        accordion_header.appendChild(accordion_row);
+
+        lastelement = accordion
       }
     }
+
+  });
+
+  if (addpaddings && lastelement) {
+     lastelement.classList.add("pb-2");
   }
-
-  addToUL(hierarchy, hierarchyUL)
-
-  var toggler = document.getElementsByClassName("caret");
-  var i;
-
-  for (i = 0; i < toggler.length; i++) {
-    toggler[i].addEventListener("click", function() {
-      this.parentElement.querySelector(".nested").classList.toggle("active");
-      this.classList.toggle("caret-down");
-    });
-  }
-
 }
+
+function updateLayerImages(layers) {
+  layers.forEach(function(l) {
+    let layer_image = document.getElementById("layer-img-"+l.id);
+    layer_image.src = "data:image/png;base64," + l.img;
+
+    if ("children" in l) {
+      updateLayerImages(l.children);
+    }
+  });
+}
+
 
 //  Prevents the context menu to show up over the canvas area
 canvas.addEventListener('contextmenu', function(evt) {
@@ -401,3 +598,11 @@ canvas.addEventListener('wheel', function (evt) {
   sendWheelEvent(canvas, "wheel", evt);
   evt.preventDefault();
 }, false);
+
+window.addEventListener("keydown", function(evt) {
+  // Check if the pressed key is the "Escape" key
+  if (evt.key === "Escape" || evt.keyCode === 27) {
+    evt.preventDefault();
+    sendKeyEvent(canvas, "keydown", evt);
+  }
+});

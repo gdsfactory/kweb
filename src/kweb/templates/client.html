@@ -1,35 +1,54 @@
 <!doctype html>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KWeb GDS File Viewer</title>
+    <link rel="stylesheet" href={{ url_for("kweb_static", path="/bootstrap/bootstrap.min.css")}}></link>
+    <link rel="stylesheet" href={{ url_for("kweb_static", path="/custom.css")}}></link>
+    <link rel="icon" type="image/png" href="/static/img/kweb.png"></link>
+  </head>
+  <body>
 
-<html>
-<head>
-  <title>KWeb GDS File Viewer</title>
-  <link rel="stylesheet" href={{ url_for("static", path="client.css") }}></link>
-</head>
-<body>
 
-<div class="viewer-panel">
-  <div class="viewer-panel-sub">
-    <div class="viewer-hierarchy-cell">
-      <div class="viewer-hierarchy" id="hierarchy"></div>
-    </div>
-    <div class="viewer-frame-cell">
-      <div class="menu-left-frame" id="modes"></div>
-      <div class="menu-right-frame" id="menu"></div>
-      <div class="viewer-frame" id="layout-view">
-        <canvas id="layout_canvas"></canvas>
+    <div class="container-fluid h-100" id="viewer-panel">
+      <div class="row h-100 p-2" id="layout">
+        <div class="col-10 rounded shadow d-flex flex-column position-relative h-100" id="layout-view">
+          <canvas class="rounded shadow canvas-container h-100 w-100" id="layout_canvas"></canvas>
+          <div class="position-absolute top-0 start-1 p-4 d-flex" id="floating-buttons">
+            <div id="modes" class="me-4"></div>
+            <div id="menu" class = "row"></div>
+          </div>
+        </div>
+        <div id="rightpanel" role="tablist" class="col-2 rounded shadow bg-default py-2">
+          <ul class="nav nav-tabs" id="navigator" role="tablist">
+            <li class="nav-item">
+              <button class="nav-link active" id="layers-tab" data-bs-toggle="tab" data-bs-target="#layers-tab-pane" type="button" role="tab" aria-controls="layers-tab-pane" aria-selected="true">Layers</button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" id="cells-tab" data-bs-toggle="tab" data-bs-target="#cells-tab-pane" type="button" role="tab" aria-controls="layers-tab-pane" aria-selected="false">Cells</button>
+            </li>
+          </ul>
+          <div class="tab-content" id="rightpanel-content">
+            <div class="tab-pane fade show active" id="layers-tab-pane" role="tabpanel" aria-labelledby="layers-tab" tabindex="0">
+              <div id="layer-buttons">
+                <div class="form-check form-switch ps-2">
+                  <input class="form-check-input ms-0 ps-0" type="checkbox" role="switch" id="layerEmptySwitch" checked>
+                  <label class="form-check-label ps-2" for="layerEmptySwitch">Hide Empty Layers</label>
+                </div>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="cells-tab-pane" role="tabpanel" aria-labelledby="cells-tab" tabindex="0"></div>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="viewer-layers-cell">
-      <div class="viewer-layers" id="layers"></div>
-    </div>
-  </div>
-</div>
-<div id="message">
-</div>
-
-<!-- needs to go here as the simple script will access the DOM -->
-<script>var ws_url="{{ url }}"; var layer_props="{{ layer_props }}"; var gds_file="{{ gds_file }}"</script>
-<script type="text/javascript" src="{{ url_for("static", path="client.js") }}"></script>
-
-</body>
+    {% if cell is defined %}
+      <script>var ws_url="{{ url }}"; var layer_props="{{ layer_props }}"; var gds_file="{{ gds_file }}"; var cell="{{ cell }}"</script>
+    {% else %}
+      <script>var ws_url="{{ url }}"; var layer_props="{{ layer_props }}"; var gds_file="{{ gds_file }}"; var cell=null</script>
+    {% endif %}
+    <script type="text/javascript" src="{{ url_for("kweb_static", path="client.js") }}"></script>
+    <script type="text/javascript" src={{ url_for("kweb_static", path="/bootstrap/bootstrap.bundle.min.js") }}></script>
+  </body>
 </html>
