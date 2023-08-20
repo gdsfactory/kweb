@@ -29,6 +29,7 @@ app = FastAPI(routes=[WebSocketRoute("/gds/ws", endpoint=LayoutViewServerEndpoin
 app.mount("/static", StaticFiles(directory=module_path / "static"), name="kweb_static")
 templates = Jinja2Templates(directory=module_path / "templates")
 
+
 @app.get("/")
 async def root(request: Request) -> _TemplateResponse:
     return templates.TemplateResponse(
@@ -40,22 +41,22 @@ async def root(request: Request) -> _TemplateResponse:
     )
 
 
-@app.get("/gds/{gds_name}.gds")
-async def gds_view_static_redirect(gds_name: str) -> RedirectResponse:
-    return RedirectResponse(f"/gds/{gds_name}")
-
 @app.get("/gds/{gds_name:path}", response_class=HTMLResponse)
 async def gds_view_static(
-    request: Request, gds_name: str, layer_props: str | None = None,
+    request: Request,
+    gds_name: str,
+    layer_props: str | None = None,
+    cell: str | None = None,
 ) -> _TemplateResponse:
     gds_file = (edafiles / f"{gds_name}").with_suffix(".gds")
 
-    exists = (
-        gds_file.exists() and gds_file.is_file() and gds_file.stat().st_mode
-    )
+    exists = gds_file.exists() and gds_file.is_file() and gds_file.stat().st_mode
 
     if not exists:
-        raise HTTPException(status_code=404, detail=f"No gds found with name \"{gds_name}\". It doesn't exist or is not accessible")
+        raise HTTPException(
+            status_code=404,
+            detail=f'No gds found with name "{gds_name}". It doesn\'t exist or is not accessible',
+        )
 
     root_path = request.scope["root_path"]
 
@@ -76,14 +77,19 @@ async def gds_view_static(
         + "/gds"
     )
 
+    template_params = {
+        "request": request,
+        "url": url,
+        "gds_file": gds_file,
+        "layer_props": layer_props,
+    }
+
+    if cell is not None:
+        template_params["cell"] = cell
+
     return templates.TemplateResponse(
         "client.html",
-        {
-            "request": request,
-            "url": url,
-            "gds_file": gds_file,
-            "layer_props": layer_props,
-        },
+        template_params,
     )
 
 
@@ -94,4 +100,5 @@ async def status() -> dict[str, Any]:
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app)

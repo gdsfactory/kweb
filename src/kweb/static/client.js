@@ -1,7 +1,13 @@
 
 ws_url = ws_url.replace("http://","ws://");
 ws_url = ws_url.replace("https://","wss://");
-let url = ws_url + '/ws?' + "gds_file=" + gds_file + "&layer_props=" + layer_props;
+
+let url;
+if (cell) {
+  url = ws_url + '/ws?' + "gds_file=" + gds_file + "&layer_props=" + layer_props + "&cell=" + cell;
+} else {
+  url = ws_url + '/ws?' + "gds_file=" + gds_file + "&layer_props=" + layer_props;
+}
 
 let canvas = document.getElementById("layout_canvas");
 let context = canvas.getContext("2d");
@@ -38,6 +44,7 @@ socket.onmessage = function(evt) {
     } else if (js.msg == "loaded") {
       showLayers(js.layers);
       showMenu(js.modes, js.annotations);
+      showCells(js.hierarchy, js.ci)
     } else if (js.msg == "layer-u") {
       updateLayerImages(js.layers)
     }
@@ -206,6 +213,164 @@ function showMenu(modes, annotations) {
   });
 }
 
+function selectCell(cell_index) {
+  socket.send(JSON.stringify(
+    {
+      "msg": "ci-s",
+      "ci": cell_index,
+      "zoom-fit": true,
+    }
+  ))
+}
+
+function selectCellByName(cell_name) {
+  let currentURL = new URL(window.location.href);
+  currentURL.searchParams.set("cell", cell_name)
+  window.history.replaceState({}, '', currentURL.toString())
+  socket.send(JSON.stringify(
+    {
+      "msg": "cell-s",
+      "cell": cell_name,
+      "zoom-fit": true,
+    }
+  ))
+}
+
+//  Updates the layer list
+function showCells(cells, current_index) {
+
+  let layerElement = document.getElementById("cells-tab-pane");
+  layerElement.replaceChildren();
+  appendCells(layerElement, cells, current_index)
+
+}
+
+  //  create table rows for each layer
+function appendCells(parentelement, cells, current_index, addpadding=false) {
+
+  let lastelement = null;
+
+  cells.forEach(function(c, i) {
+
+    let cellRow = document.createElement("div");
+    cellRow.className = "row mx-0";
+    parentelement.appendChild(cellRow);
+    if (c.children.length > 0) {
+
+      let accordion = document.createElement("div");
+
+      if (addpaddings){
+        accordion.className = "accordion accordion-flush px-2";
+      } else {
+        accordion.className = "accordion accordion-flush ps-2 pe-0";
+      }
+      accordion.id = "cellgroup-" + c.id;
+
+    
+      cellRow.appendChild(accordion);
+
+      accordion_item = document.createElement("div");
+      accordion_item.className = "accordion-item";
+      accordion.appendChild(accordion_item);
+
+      accordion_header = document.createElement("div");
+      accordion_header.className = "accordion-header d-flex flex-row";
+      accordion_item.appendChild(accordion_header);
+
+      accordion_header_button = document.createElement("button");
+      accordion_header_button.className = "accordion-button p-0 w-auto border-bottom";
+      accordion_header_button.setAttribute("type", "button");
+      accordion_header_button.setAttribute("data-bs-toggle", "collapse");
+      accordion_header_button.setAttribute("data-bs-target", "#collapseGroup" + c.id);
+      accordion_header_button.setAttribute("aria-expanded", "true");
+      accordion_header_button.setAttribute("aria-controls", "collapseGroup" + c.id);
+      let cell_name_button = document.createElement("input");
+      cell_name_button.className = "btn-check";
+      cell_name_button.setAttribute("type", "radio");
+      cell_name_button.setAttribute("name", "option-base");
+      cell_name_button.id = "cell-" + c.id;
+      cell_name_button.setAttribute("autocomplete", "off");
+      if (c.id == current_index) {
+        cell_name_button.setAttribute("checked", "")
+      }
+      cell_name_button.addEventListener("change", function(){
+        selectCellByName(c.name);
+      });
+      let cell_name = document.createElement("label");
+      cell_name.innerHTML = c.name;
+      cell_name.className = "btn btn-dark w-100 text-start p-0";
+      cell_name.setAttribute("for", "cell-" + c.id);
+      accordion_row = document.createElement("div");
+      accordion_row.className = "mx-0 border-bottom flex-grow-1";
+      accordion_row.appendChild(cell_name_button);
+      accordion_row.appendChild(cell_name);
+      accordion_header.appendChild(accordion_row);
+
+      accordion_header.appendChild(accordion_header_button);
+
+      accordion_collapse = document.createElement("div")
+      accordion_collapse.className = "accordion-collapse show";
+      accordion_collapse.setAttribute("data-bs-parent", "#" + accordion.id);
+      accordion_collapse.id = "collapseGroup" + c.id;
+      accordion_item.appendChild(accordion_collapse);
+
+      accordion_body = document.createElement("div");
+      accordion_body.className = "accordion-body p-0";
+      accordion_collapse.appendChild(accordion_body);
+
+      appendCells(accordion_body, c.children, current_index, true);
+      lastelement = accordion;
+    
+    } else {
+      let cell_name_button = document.createElement("input");
+      cell_name_button.className = "btn-check";
+      cell_name_button.setAttribute("type", "radio");
+      cell_name_button.setAttribute("name", "option-base");
+      cell_name_button.id = "cell-" + c.id;
+      cell_name_button.setAttribute("autocomplete", "off");
+      cell_name_button.addEventListener("change", function(){
+        selectCellByName(c.name);
+      });
+      if (c.id == current_index) {
+        cell_name_button.setAttribute("checked", "")
+      }
+      let cell_name = document.createElement("label");
+      cell_name.innerHTML = c.name;
+      cell_name.className = "btn btn-dark text-start p-0";
+      cell_name.setAttribute("for", "cell-" + c.id);
+      accordion_row = document.createElement("div");
+      accordion_row = document.createElement("row");
+      accordion_row.className = "row mx-0";
+      accordion_row.appendChild(cell_name_button);
+      accordion_row.appendChild(cell_name);
+    
+      let accordion = document.createElement("div");
+      if (addpaddings) {
+        accordion.className = "accordion accordion-flush ps-2 pe-0";
+      } else {
+        accordion.className = "accordion accordion-flush px-0";
+      }
+      accordion.id = "cellgroup-" + c.id;
+      cellRow.appendChild(accordion);
+
+      accordion_item = document.createElement("div");
+      accordion_item.className = "accordion-item";
+      accordion.appendChild(accordion_item);
+
+      accordion_header = document.createElement("div");
+      accordion_header.className = "accordion-header";
+      accordion_item.appendChild(accordion_header)
+      accordion_header.appendChild(accordion_row);
+
+      lastelement = accordion
+    }
+
+  });
+
+  if (addpaddings && lastelement) {
+     lastelement.classList.add("pb-2");
+  }
+}
 //  Updates the layer list
 function showLayers(layers) {
 

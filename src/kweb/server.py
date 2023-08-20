@@ -16,7 +16,7 @@ from starlette.endpoints import WebSocketEndpoint
 port = 8765
 host = "localhost"
 
-CellDict: TypeAlias = dict[str, "CellDict"]
+CellDict: TypeAlias = "dict[str, int | str | list[CellDict]]"
 
 
 class LayoutViewServerEndpoint(WebSocketEndpoint):
@@ -34,6 +34,9 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
 
         self.url = params["gds_file"]
         self.layer_props = params.get("layer_props", None)
+        self.initial_cell: str | None = None
+        if "cell" in params:
+            self.initial_cell = params["cell"]
 
     async def on_connect(self, websocket: WebSocket) -> None:
         await websocket.accept()
@@ -62,6 +65,11 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
         cv = self.layout_view.active_cellview()
         ci = cv.cell_index
         return cv.layout().cell(ci)
+
+    def set_current_cell(self, ci: int | str) -> None:
+        cell = self.layout_view.active_cellview().layout().cell(ci)
+        self.layout_view.active_cellview().cell = cell
+        self.layout_view.max_hier()
 
     def layer_dump(
         self,
@@ -199,27 +207,54 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
 
         return js
 
-    def hierarchy_dump(self) -> dict[str, object]:
+    def hierarchy_dump(self) -> list[CellDict]:
         layout = self.layout_view.active_cellview().layout()
-        top_cell = layout.top_cell()
+        top_cells = layout.top_cells()
 
-        def get_child_dict(cell: db.Cell) -> CellDict:
+        def get_children(cell: db.Cell) -> list[CellDict]:
             if not cell.child_cells():
-                return {}
-            child_dict: CellDict = {}
+                return []
+            children: list[CellDict] = []
             iter = cell.each_child_cell()
             for child_idx in iter:
                 child = layout.cell(child_idx)
-                child_dict[child.name] = get_child_dict(child)
-            return child_dict
+                children.append(
+                    {
+                        "name": child.name,
+                        "id": child.cell_index(),
+                        "children": get_children(child),
+                    }
+                )
+            return children
 
-        return {top_cell.name: get_child_dict(top_cell)}
+        return [
+            {
+                "name": top_cell.name,
+                "id": top_cell.cell_index(),
+                "children": get_children(top_cell),
+            }
+            for top_cell in top_cells
+        ]
+
+    async def send_hierarchy(self, websocket: WebSocket) -> None:
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "msg": "hierarchy",
+                    "hierarchy": self.hierarchy_dump(),
+                    "ci": self.current_cell().cell_index(),
+                }
+            )
+        )
 
     async def connection(self, websocket: WebSocket, path: str | None = None) -> None:
         self.layout_view = lay.LayoutView(True)
         self.layout_view.load_layout(self.url)
         if Path(self.layer_props).is_file():
             self.layout_view.load_layer_props(self.layer_props)
+        if self.initial_cell:
+            self.set_current_cell(self.initial_cell)
+            self.layout_view.zoom_fit()
         self.layout_view.max_hier()
 
         await websocket.send_text(
@@ -230,6 +265,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                     "annotations": self.annotation_dump(),
                     "layers": self.layer_dump(),
                     "hierarchy": self.hierarchy_dump(),
+                    "ci": self.current_cell().cell_index(),
                 }
             )
         )
@@ -237,9 +273,9 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
         asyncio.create_task(self.timer(websocket))
 
     async def timer(self, websocket: WebSocket) -> None:
-        self.layout_view.on_image_updated_event = lambda: self.image_updated(
+        self.layout_view.on_image_updated_event = lambda: self.image_updated(  # type: ignore[attr-defined,assignment]
             websocket
-        )  # type: ignore[attr-defined,assignment]
+        )
         while True:
             self.layout_view.timer()  # type: ignore[attr-defined]
             await asyncio.sleep(0.01)
@@ -365,3 +401,11 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                 )
             case "keydown":
                 self.key_event(js)
+            case "ci-s":
+                self.set_current_cell(js["ci"])
+                self.layout_view.zoom_fit()
+            case "cell-s":
+                self.set_current_cell(js["cell"])
+                self.layout_view.zoom_fit()
+            case "zoom-f":
+                self.layout_view.zoom_fit()
