@@ -48,6 +48,7 @@
     {% else %}
       <script>var ws_url="{{ url }}"; var layer_props="{{ layer_props }}"; var gds_file="{{ gds_file }}"; var cell=null</script>
     {% endif %}
-    <script src={{ url_for("kweb_static", path="/bootstrap/bootstrap.bundle.min.js") }}></script>
+    <script type="text/javascript" src="{{ url_for("kweb_static", path="client.js") }}"></script>
+    <script type="text/javascript" src={{ url_for("kweb_static", path="/bootstrap/bootstrap.bundle.min.js") }}></script>
   </body>
 </html>
