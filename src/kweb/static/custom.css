@@ -81,4 +81,6 @@ body {
   color: #aaa;
   background-color: #666;
 }
-
+.layer-img {
+  cursor: pointer;
+}

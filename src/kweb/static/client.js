@@ -267,6 +267,7 @@ function appendLayers(parentelement, layers, addpaddings = false) {
       layer_image.src = "data:image/png;base64," + l.img;
       layer_image.style = "max-width: 100%;";
       layer_image.id  = "layer-img-" + l.id;
+      layer_image.className = "layer-img";
 
       function click_layer_img() {
         l.v = !l.v;
@@ -312,6 +313,7 @@ function appendLayers(parentelement, layers, addpaddings = false) {
       layer_image.src = "data:image/png;base64," + l.img;
       layer_image.style = "max-width: 100%;";
       layer_image.id  = "layer-img-" + l.id;
+      layer_image.className = "layer-img";
       function click_layer_img() {
         l.v = !l.v;
         let ev = { msg: "layer-v", id: l.id, value: l.v};
