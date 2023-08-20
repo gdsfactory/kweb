@@ -191,12 +191,20 @@ function showMenu(modes, annotations) {
 
   let clearRulers = document.createElement("button");
   clearRulers.textContent = "Clear Rulers";
-  clearRulers.className = "btn btn-primary";
+  clearRulers.className = "col-auto btn btn-primary me-2";
   clearRulers.setAttribute("type", "button");
   clearRulers.onclick = function() {
     socket.send(JSON.stringify({ msg: "clear-annotations" }));
   };
   menuElement.appendChild(clearRulers);
+  let zoomFit= document.createElement("button");
+  zoomFit.textContent = "Zoom Fit";
+  zoomFit.className = "col-auto btn btn-primary";
+  zoomFit.setAttribute("type", "button");
+  zoomFit.onclick = function() {
+    socket.send(JSON.stringify({ msg: "zoom-f" }));
+  };
+  menuElement.appendChild(zoomFit);
 
   let index = 0;
 
