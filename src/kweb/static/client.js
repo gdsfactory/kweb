@@ -43,6 +43,8 @@ socket.onmessage = function(evt) {
     } else if (js.msg == "loaded") {
       showLayers(js.layers);
       showMenu(js.modes, js.annotations);
+    } else if (js.msg == "layer-u") {
+      updateLayers(js.layers)
     }
   } else if (initialized) {
 
@@ -264,11 +266,11 @@ function appendLayers(parentelement, layers) {
       let layer_image = document.createElement("img");
       layer_image.src = "data:image/png;base64," + l.img;
       layer_image.style = "max-width: 100%;";
+      layer_image.id  = "layer-img-" + l.id;
 
       function click_layer_img() {
-        console.log(l)
-        l.visible = !Boolean(l.visible);
-        let ev = { msg: "layer-v", id: l.id, value: l.visible};
+        l.v = !l.v;
+        let ev = { msg: "layer-v", id: l.id, value: l.v};
         socket.send(JSON.stringify(ev));
       }
 
@@ -309,10 +311,11 @@ function appendLayers(parentelement, layers) {
       let layer_image = document.createElement("img");
       layer_image.src = "data:image/png;base64," + l.img;
       layer_image.style = "max-width: 100%;";
+      layer_image.id  = "layer-img-" + l.id;
       function click_layer_img() {
-        let ev = { msg: "layer-v", id: l.id, value: !l.visible};
+        l.v = !l.v;
+        let ev = { msg: "layer-v", id: l.id, value: l.v};
         socket.send(JSON.stringify(ev));
-        l.visible = !l.visible;
       }
 
       layer_image.addEventListener("click", click_layer_img);
@@ -347,6 +350,17 @@ function appendLayers(parentelement, layers) {
 
   });
 
+}
+
+function updateLayers(layers) {
+  layers.forEach(function(l) {
+    let layer_image = document.getElementById("layer-img-"+l.id);
+    layer_image.src = "data:image/png;base64," + l.img;
+
+    if ("children" in l) {
+      updateLayers(l.children);
+    }
+  });
 }
 
 

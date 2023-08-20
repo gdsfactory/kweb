@@ -306,7 +306,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                         await websocket.send_text(
                             json.dumps(
                                 {
-                                    "msg": "layer-v",
+                                    "msg": "layer-u",
                                     "layers": self.layer_dump(iter.dup(), end_iter=nit),
                                 }
                             )
