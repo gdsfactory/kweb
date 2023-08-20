@@ -73,7 +73,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
         js = []
         # for layer in self.layout_view.each_layer():
         if end_iter:
-            while not iter.at_end() and not iter == end_iter:
+            while not iter.at_end() and iter != end_iter:
                 layer = iter.current()
                 if layer.has_children():
                     children = self.layer_dump(
@@ -133,7 +133,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                             .empty(),
                         }
                     )
-                    iter.next()
+                    iter.next_sibling(1)
         else:
             while not iter.at_end():
                 layer = iter.current()
@@ -162,10 +162,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                                     iter, 50, 25, 1
                                 ).to_png_data()
                             ).decode("ASCII"),
-                            "children": self.layer_dump(
-                                iter=iter.dup().down_first_child(),
-                                end_iter=iter.dup().down_last_child(),
-                            ),
+                            "children": children,
                             "empty": all(
                                 (c["empty"] for c in children)  # type: ignore[call-overload]
                             ),
@@ -198,7 +195,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                             .empty(),
                         }
                     )
-                    iter.next()
+                    iter.next_sibling(1)
 
         return js
 

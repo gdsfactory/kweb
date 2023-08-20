@@ -207,22 +207,23 @@ function showMenu(modes, annotations) {
 }
 
 //  Updates the layer list
-function showLayers(layers, showempty=true) {
+function showLayers(layers) {
 
   let layerElement = document.getElementById("layers-tab-pane");
   let layerButtons = document.getElementById("layer-buttons");
+
+  let layerSwitch = document.getElementById("layerEmptySwitch");
 
   let layerTable = document.getElementById("table-layer") || document.createElement("div");
   layerTable.id = "table-layer";
   layerTable.className = "container-fluid text-left px-0 pb-2";
   layerElement.replaceChildren(layerButtons, layerTable);
 
-  let cell;
-  let inner;
-  let s;
-  let visibilityCheckboxes = [];
-
-  appendLayers(layerTable, layers, addempty=showempty, addpaddings=true);
+  appendLayers(layerTable, layers, addempty=!layerSwitch.checked, addpaddings=true);
+  layerSwitch.addEventListener("change", function() {
+    layerTable.replaceChildren();
+    appendLayers(layerTable, layers, addempty=!this.checked, addpaddings=true);
+  });
 
 }
   //  create table rows for each layer
