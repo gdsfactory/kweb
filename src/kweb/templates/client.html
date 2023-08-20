@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -30,7 +30,14 @@
             </li>
           </ul>
           <div class="tab-content" id="rightpanel-content">
-            <div class="tab-pane fade show active" id="layers-tab-pane" role="tabpanel" aria-labelledby="layers-tab" tabindex="0"></div>
+            <div class="tab-pane fade show active" id="layers-tab-pane" role="tabpanel" aria-labelledby="layers-tab" tabindex="0">
+              <div id="layer-buttons">
+                <div class="form-check form-switch ps-2">
+                  <input class="form-check-input ms-0 ps-0" type="checkbox" role="switch" id="layerEmptySwitch">
+                  <label class="form-check-label" for="layerEmptySwitch">Hide Empty Layers</label>
+                </div>
+              </div>
+            </div>
             <div class="tab-pane fade" id="cells-tab-pane" role="tabpanel" aria-labelledby="cells-tab" tabindex="0"></div>
           </div>
         </div>

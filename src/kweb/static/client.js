@@ -39,7 +39,7 @@ socket.onmessage = function(evt) {
       showLayers(js.layers);
       showMenu(js.modes, js.annotations);
     } else if (js.msg == "layer-u") {
-      updateLayers(js.layers)
+      updateLayerImages(js.layers)
     }
   } else if (initialized) {
 
@@ -207,167 +207,174 @@ function showMenu(modes, annotations) {
 }
 
 //  Updates the layer list
-function showLayers(layers) {
+function showLayers(layers, showempty=true) {
 
   let layerElement = document.getElementById("layers-tab-pane");
-  layerElement.childNodes = new Array();
+  let layerButtons = document.getElementById("layer-buttons");
 
-  let layerTable = document.createElement("div");
+  let layerTable = document.getElementById("table-layer") || document.createElement("div");
+  layerTable.id = "table-layer";
   layerTable.className = "container-fluid text-left px-0 pb-2";
-  layerElement.appendChild(layerTable)
+  layerElement.replaceChildren(layerButtons, layerTable);
 
   let cell;
   let inner;
   let s;
   let visibilityCheckboxes = [];
 
-  appendLayers(layerTable, layers, true);
+  appendLayers(layerTable, layers, addempty=showempty, addpaddings=true);
 
 }
   //  create table rows for each layer
-function appendLayers(parentelement, layers, addpaddings = false) {
+function appendLayers(parentelement, layers, addempty=false, addpaddings = false) {
+
+  let lastelement = null;
+
   layers.forEach(function(l, i) {
 
-    let layerRow = document.createElement("div");
-    layerRow.className = "row mx-0";
-    parentelement.appendChild(layerRow);
+    if (addempty || !l.empty) {
 
-    if ("children" in l) {
+      let layerRow = document.createElement("div");
+      layerRow.className = "row mx-0";
+      parentelement.appendChild(layerRow);
+      if ("children" in l) {
 
-      let accordion = document.createElement("div");
+        let accordion = document.createElement("div");
 
-      if (addpaddings){
-        accordion.className = "accordion accordion-flush px-2";
+        if (addpaddings){
+          accordion.className = "accordion accordion-flush px-2";
+        } else {
+          accordion.className = "accordion accordion-flush ps-2 pe-0";
+        }
+        accordion.id = "layergroup-" + l.id;
+
+      
+        layerRow.appendChild(accordion);
+
+        accordion_item = document.createElement("div");
+        accordion_item.className = "accordion-item";
+        accordion.appendChild(accordion_item);
+
+        accordion_header = document.createElement("div");
+        accordion_header.className = "accordion-header d-flex flex-row";
+        accordion_item.appendChild(accordion_header);
+
+        accordion_header_button = document.createElement("button");
+        accordion_header_button.className = "accordion-button p-0 flex-grow-1";
+        accordion_header_button.setAttribute("type", "button");
+        accordion_header_button.setAttribute("data-bs-toggle", "collapse");
+        accordion_header_button.setAttribute("data-bs-target", "#collapseGroup" + l.id);
+        accordion_header_button.setAttribute("aria-expanded", "true");
+        accordion_header_button.setAttribute("aria-controls", "collapseGroup" + l.id);
+        let img_cont = document.createElement("div");
+        img_cont.className = "col-auto p-0";
+        let layer_image = document.createElement("img");
+        layer_image.src = "data:image/png;base64," + l.img;
+        layer_image.style = "max-width: 100%;";
+        layer_image.id  = "layer-img-" + l.id;
+        layer_image.className = "layer-img";
+
+        function click_layer_img() {
+          l.v = !l.v;
+          let ev = { msg: "layer-v", id: l.id, value: l.v};
+          socket.send(JSON.stringify(ev));
+        }
+
+        layer_image.addEventListener("click", click_layer_img);
+      
+        img_cont.appendChild(layer_image);
+        let layer_name = document.createElement("div");
+        layer_name.innerHTML = l.name;
+        layer_name.className = "col";
+        let layer_source = document.createElement("div");
+        layer_source.innerHTML = l.s;
+        layer_source.className = "col-auto";
+        accordion_row = document.createElement("div");
+        accordion_row.className = "row mx-0";
+        accordion_header.insertBefore(img_cont, accordion_header.firstChild);
+        accordion_row.appendChild(layer_name);
+        accordion_row.appendChild(layer_source);
+        accordion_header_button.appendChild(accordion_row);
+
+        accordion_header.appendChild(accordion_header_button);
+
+        accordion_collapse = document.createElement("div")
+        accordion_collapse.className = "accordion-collapse show";
+        accordion_collapse.setAttribute("data-bs-parent", "#" + accordion.id);
+        accordion_collapse.id = "collapseGroup" + l.id;
+        accordion_item.appendChild(accordion_collapse);
+
+        accordion_body = document.createElement("div");
+        accordion_body.className = "accordion-body p-0";
+        accordion_collapse.appendChild(accordion_body);
+
+        appendLayers(accordion_body, l.children, addempty=addempty);
+        lastelement = accordion;
+      
       } else {
-        accordion.className = "accordion accordion-flush ps-2 pe-0";
-      }
-      accordion.id = "layergroup-" + l.id;
+        let img_cont = document.createElement("div");
+        img_cont.className = "col-auto p-0";
+        let layer_image = document.createElement("img");
+        layer_image.src = "data:image/png;base64," + l.img;
+        layer_image.style = "max-width: 100%;";
+        layer_image.id  = "layer-img-" + l.id;
+        layer_image.className = "layer-img";
+        function click_layer_img() {
+          l.v = !l.v;
+          let ev = { msg: "layer-v", id: l.id, value: l.v};
+          socket.send(JSON.stringify(ev));
+        }
 
+        layer_image.addEventListener("click", click_layer_img);
+        img_cont.appendChild(layer_image);
+        let layer_name = document.createElement("div");
+        layer_name.innerHTML = l.name;
+        layer_name.className = "col";
+        let layer_source = document.createElement("div");
+        layer_source.innerHTML = l.s;
+        layer_source.className = "col-auto pe-0";
+        accordion_row = document.createElement("row");
+        accordion_row.className = "row mx-0";
+        accordion_row.appendChild(img_cont);
+        accordion_row.appendChild(layer_name);
+        accordion_row.appendChild(layer_source);
       
-      layerRow.appendChild(accordion);
+        let accordion = document.createElement("div");
+        if (addpaddings) {
+          accordion.className = "accordion accordion-flush px-2";
+        } else {
+          accordion.className = "accordion accordion-flush ps-2 pe-0";
+        }
+        accordion.id = "layergroup-" + l.id;
+        layerRow.appendChild(accordion);
 
-      accordion_item = document.createElement("div");
-      accordion_item.className = "accordion-item";
-      accordion.appendChild(accordion_item);
+        accordion_item = document.createElement("div");
+        accordion_item.className = "accordion-item";
+        accordion.appendChild(accordion_item);
 
-      accordion_header = document.createElement("div");
-      accordion_header.className = "accordion-header d-flex flex-row";
-      accordion_item.appendChild(accordion_header);
+        accordion_header = document.createElement("div");
+        accordion_header.className = "accordion-header";
+        accordion_item.appendChild(accordion_header)
+        accordion_header.appendChild(accordion_row);
 
-      accordion_header_button = document.createElement("button");
-      accordion_header_button.className = "accordion-button p-0 flex-grow-1";
-      accordion_header_button.setAttribute("type", "button");
-      accordion_header_button.setAttribute("data-bs-toggle", "collapse");
-      accordion_header_button.setAttribute("data-bs-target", "#collapseGroup" + l.id);
-      accordion_header_button.setAttribute("aria-expanded", "true");
-      accordion_header_button.setAttribute("aria-controls", "collapseGroup" + l.id);
-      let img_cont = document.createElement("div");
-      img_cont.className = "col-auto p-0";
-      let layer_image = document.createElement("img");
-      layer_image.src = "data:image/png;base64," + l.img;
-      layer_image.style = "max-width: 100%;";
-      layer_image.id  = "layer-img-" + l.id;
-      layer_image.className = "layer-img";
-
-      function click_layer_img() {
-        l.v = !l.v;
-        let ev = { msg: "layer-v", id: l.id, value: l.v};
-        socket.send(JSON.stringify(ev));
+        lastelement = accordion
       }
-
-      layer_image.addEventListener("click", click_layer_img);
-      
-      img_cont.appendChild(layer_image);
-      let layer_name = document.createElement("div");
-      layer_name.innerHTML = l.name;
-      layer_name.className = "col";
-      let layer_source = document.createElement("div");
-      layer_source.innerHTML = l.s;
-      layer_source.className = "col-auto";
-      accordion_row = document.createElement("div");
-      accordion_row.className = "row mx-0";
-      accordion_header.insertBefore(img_cont, accordion_header.firstChild);
-      accordion_row.appendChild(layer_name);
-      accordion_row.appendChild(layer_source);
-      accordion_header_button.appendChild(accordion_row);
-
-      accordion_header.appendChild(accordion_header_button);
-
-      accordion_collapse = document.createElement("div")
-      accordion_collapse.className = "accordion-collapse show";
-      accordion_collapse.setAttribute("data-bs-parent", "#" + accordion.id);
-      accordion_collapse.id = "collapseGroup" + l.id;
-      accordion_item.appendChild(accordion_collapse);
-
-      accordion_body = document.createElement("div");
-      accordion_body.className = "accordion-body p-0";
-      accordion_collapse.appendChild(accordion_body);
-
-      appendLayers(accordion_body, l.children);
-
-      
-    } else {
-      let img_cont = document.createElement("div");
-      img_cont.className = "col-auto p-0";
-      let layer_image = document.createElement("img");
-      layer_image.src = "data:image/png;base64," + l.img;
-      layer_image.style = "max-width: 100%;";
-      layer_image.id  = "layer-img-" + l.id;
-      layer_image.className = "layer-img";
-      function click_layer_img() {
-        l.v = !l.v;
-        let ev = { msg: "layer-v", id: l.id, value: l.v};
-        socket.send(JSON.stringify(ev));
-      }
-
-      layer_image.addEventListener("click", click_layer_img);
-      img_cont.appendChild(layer_image);
-      let layer_name = document.createElement("div");
-      layer_name.innerHTML = l.name;
-      layer_name.className = "col";
-      let layer_source = document.createElement("div");
-      layer_source.innerHTML = l.s;
-      layer_source.className = "col-auto pe-0";
-      accordion_row = document.createElement("row");
-      accordion_row.className = "row mx-0";
-      accordion_row.appendChild(img_cont);
-      accordion_row.appendChild(layer_name);
-      accordion_row.appendChild(layer_source);
-      
-      let accordion = document.createElement("div");
-      if (addpaddings) {
-        accordion.className = "accordion accordion-flush px-2";
-      } else {
-        accordion.className = "accordion accordion-flush ps-2 pe-0";
-      }
-      accordion.id = "layergroup-" + l.id;
-      layerRow.appendChild(accordion);
-
-      accordion_item = document.createElement("div");
-      accordion_item.className = "accordion-item";
-      accordion.appendChild(accordion_item);
-
-      accordion_header = document.createElement("div");
-      accordion_header.className = "accordion-header";
-      accordion_item.appendChild(accordion_header)
-      accordion_header.appendChild(accordion_row);
-    
     }
 
   });
 
-  if (addpaddings) {
-    document.getElementById("layergroup-" + layers[(layers.length -1)].id).classList.add("pb-2");
+  if (addpaddings && lastelement) {
+     lastelement.classList.add("pb-2");
   }
 }
 
-function updateLayers(layers) {
+function updateLayerImages(layers) {
   layers.forEach(function(l) {
     let layer_image = document.getElementById("layer-img-"+l.id);
     layer_image.src = "data:image/png;base64," + l.img;
 
     if ("children" in l) {
-      updateLayers(l.children);
+      updateLayerImages(l.children);
     }
   });
 }

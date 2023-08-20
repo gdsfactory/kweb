@@ -58,6 +58,11 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
     def annotation_dump(self) -> list[str]:
         return [d[1] for d in self.layout_view.annotation_templates()]
 
+    def current_cell(self) -> db.Cell:
+        cv = self.layout_view.active_cellview()
+        ci = cv.cell_index
+        return cv.layout().cell(ci)
+
     def layer_dump(
         self,
         iter: lay.LayerPropertiesIterator | None = None,
@@ -71,6 +76,10 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
             while not iter.at_end() and not iter == end_iter:
                 layer = iter.current()
                 if layer.has_children():
+                    children = self.layer_dump(
+                        iter=iter.dup().down_first_child(),
+                        end_iter=iter.dup().down_last_child(),
+                    )
                     js.append(
                         {
                             "dp": layer.eff_dither_pattern(),
@@ -91,9 +100,9 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                                     iter, 50, 25, 1
                                 ).to_png_data()
                             ).decode("ASCII"),
-                            "children": self.layer_dump(
-                                iter=iter.dup().down_first_child(),
-                                end_iter=iter.dup().down_last_child(),
+                            "children": children,
+                            "empty": all(
+                                (c["empty"] for c in children)  # type: ignore[call-overload]
                             ),
                         }
                     )
@@ -119,6 +128,9 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                                     iter, 50, 25, 1
                                 ).to_png_data()
                             ).decode("ASCII"),
+                            "empty": self.current_cell()
+                            .bbox_per_layer(layer.layer_index())
+                            .empty(),
                         }
                     )
                     iter.next()
@@ -126,6 +138,10 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
             while not iter.at_end():
                 layer = iter.current()
                 if layer.has_children():
+                    children = self.layer_dump(
+                        iter=iter.dup().down_first_child(),
+                        end_iter=iter.dup().down_last_child(),
+                    )
                     js.append(
                         {
                             "dp": layer.eff_dither_pattern(),
@@ -149,6 +165,9 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                             "children": self.layer_dump(
                                 iter=iter.dup().down_first_child(),
                                 end_iter=iter.dup().down_last_child(),
+                            ),
+                            "empty": all(
+                                (c["empty"] for c in children)  # type: ignore[call-overload]
                             ),
                         }
                     )
@@ -174,6 +193,9 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                                     iter, 50, 25, 1
                                 ).to_png_data()
                             ).decode("ASCII"),
+                            "empty": self.current_cell()
+                            .bbox_per_layer(layer.layer_index())
+                            .empty(),
                         }
                     )
                     iter.next()
