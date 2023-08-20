@@ -32,11 +32,6 @@ socket.onmessage = function(evt) {
   let data = evt.data;
   if (typeof(data) === "string") {
 
-    //  For debugging:
-    //  message.textContent = data;
-
-    //  incoming messages are JSON objects
-    console.log(data)
     js = JSON.parse(data);
     if (js.msg == "initialized") {
       initialized = true;
@@ -101,8 +96,6 @@ function sendWheelEvent(canvas, type, evt) {
 
 function sendKeyEvent(canvas, type, evt) {
   if (socket.readyState == WebSocket.OPEN) {
-    console.log(type)
-    console.log(evt.keyCode)
     socket.send(JSON.stringify({ msg: type, k: evt.keyCode }));
   }
 }
@@ -220,7 +213,7 @@ function showLayers(layers) {
   layerElement.childNodes = new Array();
 
   let layerTable = document.createElement("div");
-  layerTable.className = "container-fluid text-left px-0";
+  layerTable.className = "container-fluid text-left px-0 pb-2";
   layerElement.appendChild(layerTable)
 
   let cell;
@@ -228,11 +221,11 @@ function showLayers(layers) {
   let s;
   let visibilityCheckboxes = [];
 
-  appendLayers(layerTable, layers);
+  appendLayers(layerTable, layers, true);
 
 }
   //  create table rows for each layer
-function appendLayers(parentelement, layers) {
+function appendLayers(parentelement, layers, addpaddings = false) {
   layers.forEach(function(l, i) {
 
     let layerRow = document.createElement("div");
@@ -242,8 +235,15 @@ function appendLayers(parentelement, layers) {
     if ("children" in l) {
 
       let accordion = document.createElement("div");
-      accordion.className = "accordion accordion-flush pe-0";
-      accordion.id = "layergroup-" + i;
+
+      if (addpaddings){
+        accordion.className = "accordion accordion-flush px-2";
+      } else {
+        accordion.className = "accordion accordion-flush ps-2 pe-0";
+      }
+      accordion.id = "layergroup-" + l.id;
+
+      
       layerRow.appendChild(accordion);
 
       accordion_item = document.createElement("div");
@@ -258,9 +258,9 @@ function appendLayers(parentelement, layers) {
       accordion_header_button.className = "accordion-button p-0 flex-grow-1";
       accordion_header_button.setAttribute("type", "button");
       accordion_header_button.setAttribute("data-bs-toggle", "collapse");
-      accordion_header_button.setAttribute("data-bs-target", "#collapseGroup" + i);
+      accordion_header_button.setAttribute("data-bs-target", "#collapseGroup" + l.id);
       accordion_header_button.setAttribute("aria-expanded", "true");
-      accordion_header_button.setAttribute("aria-controls", "collapseGroup" + i);
+      accordion_header_button.setAttribute("aria-controls", "collapseGroup" + l.id);
       let img_cont = document.createElement("div");
       img_cont.className = "col-auto p-0";
       let layer_image = document.createElement("img");
@@ -295,7 +295,7 @@ function appendLayers(parentelement, layers) {
       accordion_collapse = document.createElement("div")
       accordion_collapse.className = "accordion-collapse show";
       accordion_collapse.setAttribute("data-bs-parent", "#" + accordion.id);
-      accordion_collapse.id = "collapseGroup" + i;
+      accordion_collapse.id = "collapseGroup" + l.id;
       accordion_item.appendChild(accordion_collapse);
 
       accordion_body = document.createElement("div");
@@ -325,7 +325,7 @@ function appendLayers(parentelement, layers) {
       layer_name.className = "col";
       let layer_source = document.createElement("div");
       layer_source.innerHTML = l.s;
-      layer_source.className = "col-auto";
+      layer_source.className = "col-auto pe-0";
       accordion_row = document.createElement("row");
       accordion_row.className = "row mx-0";
       accordion_row.appendChild(img_cont);
@@ -333,8 +333,12 @@ function appendLayers(parentelement, layers) {
       accordion_row.appendChild(layer_source);
       
       let accordion = document.createElement("div");
-      accordion.className = "accordion accordion-flush pe-0";
-      accordion.id = "layergroup-" + i;
+      if (addpaddings) {
+        accordion.className = "accordion accordion-flush px-2";
+      } else {
+        accordion.className = "accordion accordion-flush ps-2 pe-0";
+      }
+      accordion.id = "layergroup-" + l.id;
       layerRow.appendChild(accordion);
 
       accordion_item = document.createElement("div");
@@ -350,6 +354,9 @@ function appendLayers(parentelement, layers) {
 
   });
 
+  if (addpaddings) {
+    document.getElementById("layergroup-" + layers[(layers.length -1)].id).classList.add("pb-2");
+  }
 }
 
 function updateLayers(layers) {
@@ -413,7 +420,6 @@ window.addEventListener("keydown", function(evt) {
   // Check if the pressed key is the "Escape" key
   if (evt.key === "Escape" || evt.keyCode === 27) {
     evt.preventDefault();
-    console.log("Escape pressed!")
     sendKeyEvent(canvas, "keydown", evt);
   }
 });
