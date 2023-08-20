@@ -109,9 +109,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                                 ).to_png_data()
                             ).decode("ASCII"),
                             "children": children,
-                            "empty": all(
-                                (c["empty"] for c in children)  # type: ignore[call-overload]
-                            ),
+                            "empty": all(c["empty"] for c in children),
                         }
                     )
                     iter.next_sibling(1)
@@ -171,9 +169,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                                 ).to_png_data()
                             ).decode("ASCII"),
                             "children": children,
-                            "empty": all(
-                                (c["empty"] for c in children)  # type: ignore[call-overload]
-                            ),
+                            "empty": all(c["empty"] for c in children),
                         }
                     )
                     iter.next_sibling(1)
@@ -273,9 +269,10 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
         asyncio.create_task(self.timer(websocket))
 
     async def timer(self, websocket: WebSocket) -> None:
-        self.layout_view.on_image_updated_event = lambda: self.image_updated(  # type: ignore[attr-defined,assignment]
-            websocket
-        )
+        def update() -> None:
+            self.image_updated(websocket)
+
+        self.layout_view.on_image_updated_event = update  # type: ignore[assignment]
         while True:
             self.layout_view.timer()  # type: ignore[attr-defined]
             await asyncio.sleep(0.01)
@@ -380,11 +377,13 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                 )
             case "mouse_pressed":
                 self.mouse_event(
-                    self.layout_view.send_mouse_press_event, js  # type: ignore[arg-type]
+                    self.layout_view.send_mouse_press_event,
+                    js,  # type: ignore[arg-type]
                 )
             case "mouse_released":
                 self.mouse_event(
-                    self.layout_view.send_mouse_release_event, js  # type: ignore[arg-type]
+                    self.layout_view.send_mouse_release_event,
+                    js,  # type: ignore[arg-type]
                 )
             case "mouse_enter":
                 self.layout_view.send_enter_event()

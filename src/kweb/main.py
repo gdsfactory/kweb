@@ -1,12 +1,10 @@
-import pathlib
-import tempfile
-from glob import glob
+import os
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.routing import WebSocketRoute
@@ -14,8 +12,6 @@ from starlette.templating import _TemplateResponse
 
 from kweb import __version__ as version
 from kweb.server import LayoutViewServerEndpoint
-
-import os
 
 # module_path = Path(os.getenv("KWEB_EDAFILES", Path(__file__).parent.resolve()))
 module_path = Path(__file__).parent.absolute()
@@ -55,7 +51,8 @@ async def gds_view_static(
     if not exists:
         raise HTTPException(
             status_code=404,
-            detail=f'No gds found with name "{gds_name}". It doesn\'t exist or is not accessible',
+            detail=f'No gds found with name "{gds_name}".'
+            " It doesn't exist or is not accessible",
         )
 
     root_path = request.scope["root_path"]

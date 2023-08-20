@@ -274,7 +274,7 @@ function appendCells(parentelement, cells, current_index, addpadding=false) {
       }
       accordion.id = "cellgroup-" + c.id;
 
-    
+
       cellRow.appendChild(accordion);
 
       accordion_item = document.createElement("div");
@@ -328,7 +328,7 @@ function appendCells(parentelement, cells, current_index, addpadding=false) {
 
       appendCells(accordion_body, c.children, current_index, true);
       lastelement = accordion;
-    
+
     } else {
       let cell_name_button = document.createElement("input");
       cell_name_button.className = "btn-check";
@@ -351,7 +351,7 @@ function appendCells(parentelement, cells, current_index, addpadding=false) {
       accordion_row.className = "row mx-0";
       accordion_row.appendChild(cell_name_button);
       accordion_row.appendChild(cell_name);
-    
+
       let accordion = document.createElement("div");
       if (addpaddings) {
         accordion.className = "accordion accordion-flush ps-2 pe-0";
@@ -422,7 +422,7 @@ function appendLayers(parentelement, layers, addempty=false, addpaddings = false
         }
         accordion.id = "layergroup-" + l.id;
 
-      
+
         layerRow.appendChild(accordion);
 
         accordion_item = document.createElement("div");
@@ -455,7 +455,7 @@ function appendLayers(parentelement, layers, addempty=false, addpaddings = false
         }
 
         layer_image.addEventListener("click", click_layer_img);
-      
+
         img_cont.appendChild(layer_image);
         let layer_name = document.createElement("div");
         layer_name.innerHTML = l.name;
@@ -484,7 +484,7 @@ function appendLayers(parentelement, layers, addempty=false, addpaddings = false
 
         appendLayers(accordion_body, l.children, addempty=addempty);
         lastelement = accordion;
-      
+
       } else {
         let img_cont = document.createElement("div");
         img_cont.className = "col-auto p-0";
@@ -512,7 +512,7 @@ function appendLayers(parentelement, layers, addempty=false, addpaddings = false
         accordion_row.appendChild(img_cont);
         accordion_row.appendChild(layer_name);
         accordion_row.appendChild(layer_source);
-      
+
         let accordion = document.createElement("div");
         if (addpaddings) {
           accordion.className = "accordion accordion-flush px-2";
