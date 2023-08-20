@@ -26,17 +26,6 @@ app.mount("/static", StaticFiles(directory=module_path / "static"), name="kweb_s
 templates = Jinja2Templates(directory=module_path / "templates")
 
 
-@app.get("/")
-async def root(request: Request) -> _TemplateResponse:
-    return templates.TemplateResponse(
-        "file_browser.html",
-        {
-            "request": request,
-            "message": "Welcome to kweb visualizer",
-        },
-    )
-
-
 @app.get("/gds/{gds_name:path}", response_class=HTMLResponse)
 async def gds_view_static(
     request: Request,
