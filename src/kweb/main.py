@@ -50,7 +50,7 @@ def get_app(files_location: str | Path | None = None) -> FastAPI:
         envedafiles = os.getenv("KWEB_FILESLOCATION")
         if envedafiles is None:
             raise RuntimeError(
-                "A filels location must be set, either via "
+                "A files location must be set, either via "
                 "kweb.main.get_app(path) as a string or Path object. "
                 'Alternatively the env variable "KWEB_FILESLOCATION"'
                 " can be set with the path"
