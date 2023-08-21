@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 from typing import Any
+from glob import glob
+import pathlib
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.exceptions import HTTPException
@@ -21,6 +23,26 @@ router = APIRouter()
 templates = Jinja2Templates(directory=module_path / "templates")
 
 edafiles: Path | None = None
+
+
+@router.get("/", response_class=HTMLResponse)
+async def gds_list(request: Request):
+    """List all saved GDS files."""
+    files_root = pathlib.Path(os.getenv("KWEB_FILESLOCATION"))
+    paths_list = glob(str(files_root / "*.gds"))
+    files_list = sorted(Path(gdsfile).stem for gdsfile in paths_list)
+    files_metadata = [
+        {"name": file_name, "url": f"gds/{file_name}"} for file_name in files_list
+    ]
+    return templates.TemplateResponse(
+        "file_browser.html.j2",
+        {
+            "request": request,
+            "message": f"GDS files in {str(files_root)!r}",
+            "files_root": files_root,
+            "files_metadata": files_metadata,
+        },
+    )
 
 
 def get_app(files_location: str | Path | None = None) -> FastAPI:
