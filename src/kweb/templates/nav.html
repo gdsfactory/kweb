@@ -1,0 +1,14 @@
+<div class="container-fluid mb-2" style="height:60px">
+  <nav class="navbar bg-body-tertiary fixed-top">
+    <div class="container-fluid">
+      <a class="navbar-brand">
+        <img src="{{ url_for('kweb_static', path='/img/kweb.png') }}" width="30", height="30">
+        {% if page_name %}
+          KWeb {{page_name}}
+        {% else %}
+          KWeb
+        {% endif %}
+      </a>
+    </div>
+  </nav>
+</div>
