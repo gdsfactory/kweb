@@ -92,7 +92,7 @@ include_trailing_comma = true
 skip = ["kweb/__init__.py"]
 
 [tool.pytest.ini_options]
-testpaths = ["src", "tests"]
+testpaths = ["tests"]
 # addopts = --tb=no
 addopts = '--tb=short'
 python_files = ["src/*.py", "tests/*.py"]
