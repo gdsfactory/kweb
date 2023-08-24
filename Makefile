@@ -8,6 +8,11 @@ test:
 cov:
 	pytest --cov=kweb
 
+run:
+	export KWEB_FILESLOCATION=/tmp/gdsfactory
+	cd src/kweb
+	uvicorn --reload default:app
+
 mypy:
 	mypy . --ignore-missing-imports
 

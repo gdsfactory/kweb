@@ -5,7 +5,7 @@ import socket
 # import requests
 import uvicorn
 
-from kweb.main import app
+from kweb.default import app
 
 global jupyter_server
 jupyter_server = None

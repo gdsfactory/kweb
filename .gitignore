@@ -3,6 +3,8 @@ __pycache__/
 extra/
 *.py[cod]
 *$py.class
+src/kweb/gds_files/
+
 
 # C extensions
 *.so
