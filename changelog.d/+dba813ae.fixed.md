@@ -1,1 +1,0 @@
-Fixed websocket crash when height or width == 0

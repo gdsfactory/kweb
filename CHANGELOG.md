@@ -8,6 +8,20 @@ This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the chang
 
 <!-- towncrier release notes start -->
 
+## [1.1.6](https://github.com/gdsfactory/kweb/tree/1.1.6) - 2023-09-01
+
+
+### Added
+
+- Added better button wrapping in the canvas 
+
+
+### Fixed
+
+- Fixed overflow behavior of cell/layer-list [#33](https://github.com/gdsfactory/kweb/issues/33)
+- Fixed websocket crash when height or width == 0
+
+
 ## [1.1.5](https://github.com/gdsfactory/kweb/tree/1.1.5) - 2023-08-31
 
 
