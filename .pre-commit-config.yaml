@@ -19,6 +19,11 @@ repos:
         args: ["--pytest-test-first"]
       - id: requirements-txt-fixer
       - id: trailing-whitespace
+        exclude: |
+          (?x)^(
+            changelog\.d/.*|
+            CHANGELOG\.md
+          )$
 
   - repo: https://github.com/pycqa/isort
     rev: "5.12.0"

@@ -154,7 +154,7 @@ function showMenu(modes, annotations) {
   modeElement.childNodes = new Array();
 
   let modeRow = document.createElement("div");
-  modeRow.className = "btn-group";
+  modeRow.className = "btn-group flex-wrap";
   modeRow.setAttribute("role", "group");
   modeRow.role = "group";
   modeRow.aria_label = "Layout Mode Selection"
@@ -191,7 +191,7 @@ function showMenu(modes, annotations) {
 
   let clearRulers = document.createElement("button");
   clearRulers.textContent = "Clear Rulers";
-  clearRulers.className = "col-auto btn btn-primary me-2";
+  clearRulers.className = "col-auto btn btn-primary mx-2";
   clearRulers.setAttribute("type", "button");
   clearRulers.onclick = function() {
     socket.send(JSON.stringify({ msg: "clear-annotations" }));
@@ -199,7 +199,7 @@ function showMenu(modes, annotations) {
   menuElement.appendChild(clearRulers);
   let zoomFit= document.createElement("button");
   zoomFit.textContent = "Zoom Fit";
-  zoomFit.className = "col-auto btn btn-primary";
+  zoomFit.className = "col-auto btn btn-primary mx-2";
   zoomFit.setAttribute("type", "button");
   zoomFit.onclick = function() {
     socket.send(JSON.stringify({ msg: "zoom-f" }));
