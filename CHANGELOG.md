@@ -1,3 +1,11 @@
+## [1.1.5](https://github.com/gdsfactory/kweb/tree/1.1.5) - 2023-08-31
+
+
+### Fixed
+
+- Fixed jupyter module
+
+
 # [CHANGELOG](https://keepachangelog.com/en/1.0.0/)
 
 ## 0.0.8

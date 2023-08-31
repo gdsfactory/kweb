@@ -24,7 +24,9 @@ jobs:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
-          make build
+          rm -rf dist
+          python -m pip install build
+          python -m build
           twine upload dist/*
 
   # release_docker:
