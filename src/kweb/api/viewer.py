@@ -40,6 +40,32 @@ async def gds_view_static(
     return await show_file(request, gds_file, layer_props, cell)
 
 
+@router.get("/file/{file_name:path}", response_class=HTMLResponse)
+async def file_view_static(
+    request: Request,
+    file_name: str,
+    layer_props: str | None = None,
+    cell: str | None = None,
+) -> _TemplateResponse:
+    settings = router.dependencies[0].dependency()  # type: ignore[misc]
+    file = settings.fileslocation / f"{file_name}"
+
+    exists = (
+        file.exists()
+        and file.is_file()
+        and file.stat().st_mode  # type: ignore[misc, operator]
+    )
+
+    if not exists:
+        raise HTTPException(
+            status_code=404,
+            detail=f'No file found with name "{file_name}".'
+            " It doesn't exist or is not accessible",
+        )
+
+    return await show_file(request, file, layer_props, cell)
+
+
 async def show_file(
     request: Request,
     file: Path,
@@ -67,7 +93,7 @@ async def show_file(
     template_params = {
         "request": request,
         "url": url,
-        "gds_file": file,
+        "file": file,
         "layer_props": layer_props,
     }
 

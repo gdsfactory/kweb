@@ -4,9 +4,9 @@ ws_url = ws_url.replace("https://","wss://");
 
 let url;
 if (cell) {
-  url = ws_url + '/ws?' + "gds_file=" + gds_file + "&layer_props=" + layer_props + "&cell=" + cell;
+  url = ws_url + '/ws?' + "file=" + file + "&layer_props=" + layer_props + "&cell=" + cell;
 } else {
-  url = ws_url + '/ws?' + "gds_file=" + gds_file + "&layer_props=" + layer_props;
+  url = ws_url + '/ws?' + "file=" + file + "&layer_props=" + layer_props;
 }
 
 let canvas = document.getElementById("layout_canvas");

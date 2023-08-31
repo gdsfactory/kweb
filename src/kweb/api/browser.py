@@ -1,3 +1,4 @@
+from itertools import chain
 from pathlib import Path
 
 from fastapi import APIRouter, Request
@@ -20,7 +21,9 @@ async def file_browser(
     request: Request,
 ) -> _TemplateResponse:
     settings: Config = router.dependencies[0].dependency()  # type: ignore[misc]
-    files = settings.fileslocation.glob("**/*.gds")
+    files = chain(
+        settings.fileslocation.glob("**/*.gds"), settings.fileslocation.glob("**/*.oas")
+    )
     return templates.TemplateResponse(
         "browser.html",
         {

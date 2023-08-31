@@ -32,7 +32,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
             key, value = _param.split("=")
             params[key] = value
 
-        self.url = params["gds_file"]
+        self.url = params["file"]
         self.layer_props = params.get("layer_props", None)
         self.initial_cell: str | None = None
         if "cell" in params:
