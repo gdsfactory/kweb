@@ -1,3 +1,3 @@
-from .browser import get_app
+from kweb.browser import get_app
 
 app = get_app()
