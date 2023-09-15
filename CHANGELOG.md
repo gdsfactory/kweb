@@ -8,6 +8,14 @@ This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the chang
 
 <!-- towncrier release notes start -->
 
+## [1.1.7](https://github.com/gdsfactory/kweb/tree/1.1.7) - 2023-09-15
+
+
+### Added
+
+- Added option to enable/disable editable mode; default=non-editable
+
+
 ## [1.1.6](https://github.com/gdsfactory/kweb/tree/1.1.6) - 2023-09-01
 
 
