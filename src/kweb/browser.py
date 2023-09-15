@@ -7,10 +7,13 @@ from pydantic import ValidationError
 from . import config
 from .api.browser import router as browser_router
 from .api.viewer import router as viewer_router
-from .layout_server import LayoutViewServerEndpoint
+from .layout_server import (
+    EditableLayoutViewServerEndpoint,
+    LayoutViewServerEndpoint,
+)
 
 
-def get_app(fileslocation: Path | str | None = None) -> FastAPI:
+def get_app(fileslocation: Path | str | None = None, editable: bool = False) -> FastAPI:
     if fileslocation is None:
 
         def settings() -> config.Config:
@@ -36,7 +39,10 @@ def get_app(fileslocation: Path | str | None = None) -> FastAPI:
     viewer_router.dependencies.insert(0, Depends(settings))
     browser_router.dependencies.insert(0, Depends(settings))
 
-    app.add_websocket_route("/ws", LayoutViewServerEndpoint)
+    if editable:
+        app.add_websocket_route("/ws", EditableLayoutViewServerEndpoint)
+    else:
+        app.add_websocket_route("/ws", LayoutViewServerEndpoint)
     viewer_router.dependencies.insert(0, Depends(settings))
     app.include_router(viewer_router)
     app.include_router(browser_router)

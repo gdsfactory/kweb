@@ -20,7 +20,11 @@ CellDict: TypeAlias = "dict[str, int | str | list[CellDict]]"
 
 
 class LayoutViewServerEndpoint(WebSocketEndpoint):
-    encoding = "text"
+    editable: bool = False
+
+    def __init_subclass__(cls, editable: bool = False, **kwargs: Any):
+        super().__init_subclass__(**kwargs)
+        cls.editable = editable
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -244,7 +248,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
         )
 
     async def connection(self, websocket: WebSocket, path: str | None = None) -> None:
-        self.layout_view = lay.LayoutView(True)
+        self.layout_view = lay.LayoutView(self.editable)
         self.layout_view.load_layout(self.url)
         if Path(self.layer_props).is_file():
             self.layout_view.load_layer_props(self.layer_props)
@@ -408,3 +412,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                 self.layout_view.zoom_fit()
             case "zoom-f":
                 self.layout_view.zoom_fit()
+
+
+class EditableLayoutViewServerEndpoint(LayoutViewServerEndpoint, editable=True):
+    pass
