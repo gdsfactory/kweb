@@ -91,7 +91,7 @@ async def show_file(
             + root_path
         )
     else:
-        url = ws_scheme + (request.url.hostname or "localhost")
+        url = ws_scheme + (request.url.hostname or "localhost") + root_path
 
     template_params = {
         "request": request,
