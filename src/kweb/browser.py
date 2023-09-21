@@ -7,10 +7,7 @@ from pydantic import ValidationError
 from . import config
 from .api.browser import router as browser_router
 from .api.viewer import router as viewer_router
-from .layout_server import (
-    EditableLayoutViewServerEndpoint,
-    LayoutViewServerEndpoint,
-)
+from .layout_server import EditableLayoutViewServerEndpoint, LayoutViewServerEndpoint
 
 
 def get_app(fileslocation: Path | str | None = None, editable: bool = False) -> FastAPI:

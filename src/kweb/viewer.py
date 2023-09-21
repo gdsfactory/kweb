@@ -8,10 +8,7 @@ from . import config
 from .api.viewer import router
 
 # from .layout_server import EditableLayoutViewServerEndpoint
-from .layout_server import (
-    EditableLayoutViewServerEndpoint,
-    LayoutViewServerEndpoint,
-)
+from .layout_server import EditableLayoutViewServerEndpoint, LayoutViewServerEndpoint
 
 
 def get_app(fileslocation: Path | str, editable: bool = False) -> FastAPI:
