@@ -82,13 +82,16 @@ async def show_file(
         case other:
             raise HTTPException(status_code=406, detail=f"Unknown scheme {other}")
 
-    url = (
-        ws_scheme
-        + (request.url.hostname or "localhost")
-        + ":"
-        + str(request.url.port)
-        + root_path
-    )
+    if request.url.port is not None:
+        url = (
+            ws_scheme
+            + (request.url.hostname or "localhost")
+            + ":"
+            + str(request.url.port)
+            + root_path
+        )
+    else:
+        url = ws_scheme + (request.url.hostname or "localhost")
 
     template_params = {
         "request": request,
