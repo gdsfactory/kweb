@@ -44,11 +44,11 @@
       </div>
     </div>
     {% if cell is defined %}
-      <script>var ws_url="{{ url }}"; var layer_props=String.raw`{{ layer_props }}`; var file=String.raw`{{ file }}`; var cell="{{ cell }}"</script>
+      <script>var ws_url="{{ url }}"; var layer_props=String.raw`{{ layer_props if layer_props else "null"}}`; var file=String.raw`{{ file }}`; var cell="{{ cell }}"</script>
     {% else %}
-      <script>var ws_url="{{ url }}"; var layer_props=String.raw`{{ layer_props }}`; var file=String.raw`{{ file }}`; var cell=null</script>
+      <script>var ws_url="{{ url }}"; var layer_props=String.raw`{{ layer_props if layer_props else "null"}}`; var file=String.raw`{{ file }}`; var cell=null</script>
     {% endif %}
-    <script type="text/javascript" src="{{ url_for("kweb_static", path="viewer.js") }}"></script>
+    <script type="text/javascript" src={{ url_for("kweb_static", path="viewer.js") }}></script>
     <script type="text/javascript" src={{ url_for("kweb_static", path="/bootstrap/bootstrap.bundle.min.js") }}></script>
   </body>
 </html>
