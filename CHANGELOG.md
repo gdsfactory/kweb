@@ -8,6 +8,13 @@ This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the chang
 
 <!-- towncrier release notes start -->
 
+## [1.1.10](https://github.com/gdsfactory/kweb/tree/1.1.10) - 2023-10-30
+
+
+### Fixed
+
+- Fixed windows paths being parsed wrongly 
+
 ## [1.1.9](https://github.com/gdsfactory/kweb/tree/1.1.9) - 2023-09-21
 
 
