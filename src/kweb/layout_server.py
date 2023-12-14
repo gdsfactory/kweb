@@ -21,10 +21,14 @@ CellDict: TypeAlias = "dict[str, int | str | list[CellDict]]"
 
 class LayoutViewServerEndpoint(WebSocketEndpoint):
     editable: bool = False
+    add_missing_layers: bool = True
 
-    def __init_subclass__(cls, editable: bool = False, **kwargs: Any):
+    def __init_subclass__(
+        cls, editable: bool = False, add_missing_layers: bool = True, **kwargs: Any
+    ):
         super().__init_subclass__(**kwargs)
         cls.editable = editable
+        cls.add_missing_layers = add_missing_layers
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -255,6 +259,8 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
         if self.initial_cell:
             self.set_current_cell(self.initial_cell)
             self.layout_view.zoom_fit()
+        if self.add_missing_layers:
+            self.layout_view.add_missing_layers()
         self.layout_view.max_hier()
 
         await websocket.send_text(
@@ -414,5 +420,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                 self.layout_view.zoom_fit()
 
 
-class EditableLayoutViewServerEndpoint(LayoutViewServerEndpoint, editable=True):
+class EditableLayoutViewServerEndpoint(
+    LayoutViewServerEndpoint, editable=True, add_missing_layers=True
+):
     pass
