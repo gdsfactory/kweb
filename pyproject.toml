@@ -40,7 +40,7 @@ docs = [
     "sphinx_rtd_theme",
     "sphinxcontrib-video",
     "sphinx-autodoc-typehints",
-    "sphinx-book-theme==0.3.3",
+    "sphinx-book-theme==1.1.0",
     "sphinx-click",
     "sphinx-copybutton",
     "sphinx-markdown-tables==0.0.17",
