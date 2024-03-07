@@ -19,7 +19,7 @@
 # [1.1.1 (v1.1.1)](https://github.com/gdsfactory/kweb/releases/tag/v1.1.1) - 22 Aug 2023
 
 * Add two app versions: viewer which only contains the gds viewer and browser which has the viewer and a file browser
-* Readd File Browser
+* Re-add File Browser
 
 [Changes][v1.1.1]
 
