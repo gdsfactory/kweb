@@ -9,6 +9,10 @@
 - add add_missing_layers flag [#37](https://github.com/gdsfactory/kweb/pull/37)
 - fix server_jupyter [#31](https://github.com/gdsfactory/kweb/pull/31)
 
+## Dependency Updates
+
+- Bump sphinx-book-theme from 0.3.3 to 1.1.2 [#41](https://github.com/gdsfactory/kweb/pull/41)
+
 **Full Changelog**: https://github.com/gdsfactory/kweb/compare/v1.1.1...v1.1.2
 
 
