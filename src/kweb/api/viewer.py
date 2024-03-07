@@ -25,9 +25,8 @@ async def gds_view_static(
     gds_file = (settings.fileslocation / f"{gds_name}").with_suffix(".gds")
 
     exists = (
-        gds_file.exists()
-        and gds_file.is_file()
-        and gds_file.stat().st_mode  # type: ignore[misc, operator]
+        gds_file.is_file()
+        and gds_file.stat().st_mode
     )
 
     if not exists:
@@ -51,9 +50,8 @@ async def file_view_static(
     file = settings.fileslocation / f"{file_name}"
 
     exists = (
-        file.exists()
-        and file.is_file()
-        and file.stat().st_mode  # type: ignore[misc, operator]
+        file.is_file()
+        and file.stat().st_mode
     )
 
     if not exists:
