@@ -1,68 +1,61 @@
 [build-system]
-requires = ["setuptools>=60", "wheel", "build", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
+requires = ["setuptools>=60", "wheel", "build"]
 
 [project]
-name = "kweb"
-description = "KLayout API implementation of gdsfactory"
-readme = "README.md"
-classifiers = [
-	"Programming Language :: Python :: 3.10",
-	"Programming Language :: Python :: 3.11",
-	"Operating System :: OS Independent",
-]
-requires-python = ">=3.10"
-version = "1.2.1"
 authors = [
-    {name = "gdsfactory community", email = "contact@gdsfactory.com"},
+  {name = "gdsfactory community", email = "contact@gdsfactory.com"}
+]
+classifiers = [
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Operating System :: OS Independent"
 ]
 dependencies = [
   "klayout >= 0.28.11",
   "fastapi",
   "uvicorn[standard]",
-  "jinja2",
+  "jinja2"
 ]
+description = "KLayout API implementation of gdsfactory"
+name = "kweb"
+readme = "README.md"
+requires-python = ">=3.10"
+version = "1.2.1"
 
 [project.optional-dependencies]
 dev = [
-    "mypy",
-    "pre-commit",
-    "gitpython",
-    "pylsp-mypy",
-    "types-cachetools",
-    "towncrier",
-    "tbump"
+  "mypy",
+  "pre-commit",
+  "gitpython",
+  "pylsp-mypy",
+  "types-cachetools",
+  "towncrier",
+  "tbump"
+]
+docs = [
+  "sphinx",
+  "docutils==0.17.1",
+  "sphinx_rtd_theme",
+  "sphinxcontrib-video",
+  "sphinx-autodoc-typehints",
+  "sphinx-book-theme==0.3.3",
+  "sphinx-click",
+  "sphinx-copybutton",
+  "sphinx-markdown-tables==0.0.17",
+  "myst-parser",
+  "matplotlib",
+  "nbsphinx",
+  "autodoc_pydantic"
+]
+ipy = [
+  "ipython",
+  "ipywidgets",
+  "ipyevents"
 ]
 tests = ["pytest", "pytest-cov"]
-docs = [
-    "sphinx",
-    "docutils==0.17.1",
-    "sphinx_rtd_theme",
-    "sphinxcontrib-video",
-    "sphinx-autodoc-typehints",
-    "sphinx-book-theme==0.3.3",
-    "sphinx-click",
-    "sphinx-copybutton",
-    "sphinx-markdown-tables==0.0.17",
-    "myst-parser",
-    "matplotlib",
-    "nbsphinx",
-    "autodoc_pydantic"
-    ]
-ipy = [
-    "ipython",
-    "ipywidgets",
-    "ipyevents",
-]
-
-
-[tool.setuptools.packages.find]
-where = ["src"]
 
 [tool.black]
-line-length = 88  # Specify the line length
-target-version = ['py310']  # Specify your Python version
-include = '\.pyi?$'
 exclude = '''  # Specify the files/dirs that should be ignored by the black formatter
 /(
     \.eggs
@@ -78,49 +71,64 @@ exclude = '''  # Specify the files/dirs that should be ignored by the black form
   | dist
 )/
 '''
+include = '\.pyi?$'
+line-length = 88  # Specify the line length
+target-version = ['py310']  # Specify your Python version
+
+[tool.djlint]
+extension = "html"
+format_css = true
+ignore = "H021,H006,H013"
+
+[tool.isort]
+include_trailing_comma = true
+line_length = 88
+multi_line_output = 3
+skip = ["kweb/__init__.py"]
 
 [tool.mypy]
+plugins = "pydantic.mypy"
 python_version = "3.10"
 strict = true
-plugins = "pydantic.mypy"
+
+[[tool.mypy.overrides]]
+implicit_reexport = true
+module = "kweb"
 
 [tool.pylsp-mypy]
 enabled = true
 live_mode = true
 strict = true
 
-[[tool.mypy.overrides]]
-module = "kweb"
-implicit_reexport = true
-
-[tool.isort]
-multi_line_output = 3
-line_length = 88
-include_trailing_comma = true
-skip = ["kweb/__init__.py"]
-
 [tool.pytest.ini_options]
-testpaths = ["tests"]
 # addopts = --tb=no
 addopts = '--tb=short'
-python_files = ["src/*.py", "tests/*.py"]
 norecursedirs = ["extra/*.py"]
+python_files = ["src/*.py", "tests/*.py"]
+testpaths = ["tests"]
 
-# [tool.pytest.ini_options]
-# minversion = "6.0"
-# addopts = "-ra -q"
-# testpaths = [
-#     "tests",
-#     "integration",
-# ]
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.tbump]
-# Uncomment this if your project is hosted on GitHub:
-# github_url = "https://github.com/<user or organization>/<project>/"
+
+[[tool.tbump.file]]
+src = "README.md"
+
+[[tool.tbump.file]]
+search = 'version = "{current_version}"'
+src = "pyproject.toml"
+
+[[tool.tbump.file]]
+search = '__version__ = "{current_version}"'
+src = "src/kweb/__init__.py"
+
+[tool.tbump.git]
+message_template = "Bump to {new_version}"
+tag_template = "v{new_version}"
 
 [tool.tbump.version]
 current = "1.2.1"
-
 # Example of a semver regexp.
 # Make sure this matches current_version before
 # using tbump
@@ -131,75 +139,3 @@ regex = '''
   \.
   (?P<patch>\d+)
   '''
-
-
-[tool.towncrier]
-directory = "changelog.d"
-filename = "CHANGELOG.md"
-start_string = "<!-- towncrier release notes start -->\n"
-underlines = ["", "", ""]
-template = "changelog.d/changelog_template.jinja"
-title_format = "## [{version}](https://github.com/gdsfactory/kweb/tree/{version}) - {project_date}"
-issue_format = "[#{issue}](https://github.com/gdsfactory/kweb/issues/{issue})"
-
-[[tool.towncrier.type]]
-directory = "security"
-name = "Security"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "removed"
-name = "Removed"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "deprecated"
-name = "Deprecated"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "added"
-name = "Added"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "changed"
-name = "Changed"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "fixed"
-name = "Fixed"
-showcontent = true
-
-
-[tool.tbump.git]
-message_template = "Bump to {new_version}"
-tag_template = "v{new_version}"
-
-# For each file to patch, add a [[file]] config
-# section containing the path of the file, relative to the
-# tbump.toml location.
-[[tool.tbump.file]]
-src = "README.md"
-
-[[tool.tbump.file]]
-src = "pyproject.toml"
-
-[[tool.tbump.file]]
-src = "src/kweb/__init__.py"
-# You can specify a list of commands to
-# run after the files have been patched
-# and before the git commit is made
-
-[[tool.tbump.before_commit]]
-name = "create & check changelog"
-cmd = "towncrier build --yes --version {new_version}"
-
-[[tool.tbump.before_commit]]
-name = "create & check changelog"
-cmd = "git add CHANGELOG.md"
-
-[[tool.tbump.before_commit]]
-name = "create & check changelog"
-cmd = "grep -q -F {new_version} CHANGELOG.md"

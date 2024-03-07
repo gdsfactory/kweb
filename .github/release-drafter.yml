@@ -1,0 +1,67 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+change-template: '- $TITLE [#$NUMBER](https://github.com/gdsfactory/kweb/pull/$NUMBER)'
+template: |
+  # What's Changed
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+
+categories:
+  - title: 'Breaking'
+    label: 'breaking'
+  - title: 'New'
+    labels:
+    - 'enhancement'
+    - 'feature'
+  - title: 'Bug Fixes'
+    label: 'bug'
+  - title: 'Maintenance'
+    label: 'maintenance'
+  - title: 'Documentation'
+    label: 'documentation'
+  - title: 'Other changes'
+  - title: 'Dependency Updates'
+    label: 'dependencies'
+    collapse-after: 5
+
+# Change major/breaking to major and enhancement/minor to minor after v1.0
+version-resolver:
+  minor:
+    labels:
+      - 'breaking'
+  patch:
+    labels:
+      - 'enhancement'
+      - 'bug'
+      - 'maintenance'
+      - 'documentation'
+      - 'dependencies'
+      - 'security'
+  default: patch
+
+exclude-labels:
+  - 'github_actions'
+
+autolabeler:
+  - label: 'documentation'
+    files:
+      - '*.md'
+    branch:
+      - '/docs-.+/'
+  - label: 'bug'
+    branch:
+      - '/^fix-.+/'
+    title:
+      - '/^fix/i'
+  - label: 'enhancement'
+    branch:
+      - '/^feature-.+/'
+      - '/^add-.+/'
+      - '/^improve-.+/'
+    title:
+      - '/^add\s/i'
+  - label: 'github_actions'
+    files:
+      - '.github/**/*.yml'

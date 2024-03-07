@@ -23,7 +23,7 @@ KWeb offers two basic apps:
 - Browser:
 
   A version that provides a version with a file browser for a folder and the kweb viewer for viewing the gds file in that folder.
-  This can be used by importing the funciton `kweb.browser.get_app` and settings the `KWEB_FILESLOCATION` env variable of passing
+  This can be used by importing the function `kweb.browser.get_app` and settings the `KWEB_FILESLOCATION` env variable of passing
   `fileslocation=<Path object for target folder>` to the function. Alternatively there is a default one in `kweb.default.app` that
   will only look for the env variable.
 
@@ -40,7 +40,7 @@ KWeb offers two basic apps:
 ```bash
 # Clone the repository to your local
 git clone https://github.com/gdsfactory/kweb.git
-# Install the necessary dependecies
+# Install the necessary dependencies
 cd /kweb
 python -m pip install -e .[dev]
 ```
@@ -63,7 +63,7 @@ Copy the link http://127.0.0.1:8000/gds/file.gds (or http://localhost:8000/gds/f
 
 #### Contributing
 
-Pleas make sure you have also installed pre-commit before committing:
+Please make sure you have also installed pre-commit before committing:
 
 ```bash
 python -m pip install pre-commit
