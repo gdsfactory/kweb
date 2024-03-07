@@ -12,7 +12,7 @@ classifiers = [
   "Operating System :: OS Independent"
 ]
 dependencies = [
-  "klayout >= 0.28.11",
+  "klayout >= 0.28.17",
   "fastapi",
   "uvicorn[standard]",
   "jinja2"
