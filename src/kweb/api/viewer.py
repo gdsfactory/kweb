@@ -1,12 +1,14 @@
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.exceptions import HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from starlette.templating import _TemplateResponse
 
-# from . import __version__ as version
+from .. import __version__ as version
 
 router = APIRouter()
 templates = Jinja2Templates(
@@ -14,62 +16,33 @@ templates = Jinja2Templates(
 )
 
 
-@router.get("/gds/{gds_name:path}", response_class=HTMLResponse)
-async def gds_view_static(
-    request: Request,
-    gds_name: str,
-    layer_props: str | None = None,
-    cell: str | None = None,
-) -> _TemplateResponse:
-    settings = router.dependencies[0].dependency()  # type: ignore[misc]
-    gds_file = (settings.fileslocation / f"{gds_name}").with_suffix(".gds")
-
-    exists = (
-        gds_file.is_file()
-        and gds_file.stat().st_mode
-    )
-
-    if not exists:
-        raise HTTPException(
-            status_code=404,
-            detail=f'No gds found with name "{gds_name}".'
-            " It doesn't exist or is not accessible",
-        )
-
-    return await show_file(request, gds_file, layer_props, cell)
+class FileView(BaseModel):
+    file: Path
+    cell: str | None = None
+    layer_props: str | None = None
+    rdb: str | None = None
 
 
-@router.get("/file/{file_name:path}", response_class=HTMLResponse)
+@router.get("/view", response_class=HTMLResponse)
 async def file_view_static(
-    request: Request,
-    file_name: str,
-    layer_props: str | None = None,
-    cell: str | None = None,
+    request: Request, params: Annotated[FileView, Depends()]
 ) -> _TemplateResponse:
     settings = router.dependencies[0].dependency()  # type: ignore[misc]
-    file = settings.fileslocation / f"{file_name}"
+    _file = settings.fileslocation / f"{params.file}"
 
-    exists = (
-        file.is_file()
-        and file.stat().st_mode
-    )
+    exists = _file.is_file() and _file.stat().st_mode
 
     if not exists:
         raise HTTPException(
             status_code=404,
-            detail=f'No file found with name "{file_name}".'
+            detail=f'No file found with name "{_file}".'
             " It doesn't exist or is not accessible",
         )
 
-    return await show_file(request, file, layer_props, cell)
+    return await show_file(request, layout_params=params)
 
 
-async def show_file(
-    request: Request,
-    file: Path,
-    layer_props: str | None = None,
-    cell: str | None = None,
-) -> _TemplateResponse:
+async def show_file(request: Request, layout_params: FileView) -> _TemplateResponse:
     root_path = request.scope["root_path"]
 
     match request.url.scheme:
@@ -94,12 +67,9 @@ async def show_file(
     template_params = {
         "request": request,
         "url": url,
-        "file": file,
-        "layer_props": layer_props,
     }
 
-    if cell is not None:
-        template_params["cell"] = cell
+    template_params["params"] = layout_params.model_dump(mode="json", exclude_none=True)
 
     return templates.TemplateResponse(
         "viewer.html",
@@ -107,6 +77,6 @@ async def show_file(
     )
 
 
-# @router.get("/status")
-# async def status() -> dict[str, Any]:
-#     return {"server": "kweb", "version": version}
+@router.get("/status")
+async def kweb_status() -> dict[str, str | int]:
+    return {"server": "kweb", "version": version}

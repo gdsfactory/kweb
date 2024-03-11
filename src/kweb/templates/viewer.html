@@ -9,13 +9,14 @@
         <link rel="stylesheet" href={{ url_for("kweb_static", path="/bootstrap/bootstrap.min.css") }}>
     </link>
     <link rel="stylesheet" href={{ url_for("kweb_static", path="/custom.css") }}>
+    <script type="text/javascript" src={{ url_for("kweb_static", path="/bootstrap/bootstrap.bundle.min.js") }}></script>
 </link>
 <link rel="icon" type="image/png" href={{ url_for("kweb_static", path="img/kweb.png") }}>
 </head>
 <body>
     <div class="container-fluid h-100" id="viewer-panel">
         <div class="row h-100 p-2" id="layout">
-            <div class="col-10 rounded shadow d-flex flex-column position-relative h-100"
+            <div class="col-10 rounded shadow d-flex flex-column position-relative h-100 ps-0 pe-1"
                  id="layout-view">
                 <canvas class="rounded shadow canvas-container h-100 w-100"
                         style="min-width: 100px;
@@ -29,7 +30,7 @@
             </div>
             <div id="rightpanel"
                  role="tablist"
-                 class="col-2 rounded shadow bg-default py-2 overflow-auto h-100">
+                 class="col-2 rounded shadow bg-default overflow-auto h-100 p-0 ps-1">
                 <ul class="nav nav-tabs" id="navigator" role="tablist">
                     <li class="nav-item">
                         <button class="nav-link active"
@@ -48,8 +49,29 @@
                                 data-bs-target="#cells-tab-pane"
                                 type="button"
                                 role="tab"
-                                aria-controls="layers-tab-pane"
+                                aria-controls="cells-tab-pane"
                                 aria-selected="false">Cells</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link"
+                                id="metainfo-tab"
+                                data-bs-toggle="tab"
+                                data-bs-target="#metainfo-tab-pane"
+                                type="button"
+                                role="tab"
+                                aria-controls="metainfo-tab-pane"
+                                aria-selected="false"
+                                hidden>Cell MetaInfo</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link"
+                                id="rdb-tab"
+                                data-bs-toggle="tab"
+                                data-bs-target="#rdb-tab-pane"
+                                type="button"
+                                role="tab"
+                                aria-controls="rdb-tab-pane"
+                                aria-selected="false">RDB</button>
                     </li>
                 </ul>
                 <div class="tab-content" id="rightpanel-content">
@@ -74,16 +96,56 @@
                          role="tabpanel"
                          aria-labelledby="cells-tab"
                          tabindex="0"></div>
+                    <div class="tab-pane fade"
+                         id="metainfo-tab-pane"
+                         role="tabpanel"
+                         aria-labelledby="metainfo-tab"
+                         tabindex="0"></div>
+                    <div class="tab-pane fade"
+                         id="rdb-tab-pane"
+                         role="tabpanel"
+                         aria-labelledby="rdb-tab"
+                         tabindex="0">
+                        <div class="form-floating my-1">
+                            <input type="text"
+                                   class="form-control"
+                                   id="rdbCategory"
+                                   oninput="filterCategories(this);"
+                                   onfocus="categoryFocus(event);"
+                                   onfocusout="categoryFocusOut(event);"
+                                   placeholder="...">
+                            <label for="floatingInput">Filter by Category</label>
+                        </div>
+                        <select class="form-select my-1"
+                                onchange="selectCategory(event)"
+                                size="5"
+                                id="rdbCategoryOptions"
+                                hidden></select>
+                        <div class="form-floating my-1">
+                            <input type="text"
+                                   class="form-control"
+                                   id="rdbCell"
+                                   oninput="filterCells(this);"
+                                   onfocus="cellFocus(event);"
+                                   onfocusout="cellFocusOut(event);"
+                                   placeholder="...">
+                            <label for="floatingPassword">Filter by Cell</label>
+                        </div>
+                        <select class="form-select my-1"
+                                onchange="selectCell(event);"
+                                size="5"
+                                id="rdbCellOptions"
+                                hidden></select>
+                        <select class="form-select my-1"
+                                onchange="requestItemDrawings();"
+                                multiple
+                                id="rdbItems"></select>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    {% if cell is defined %}
-        <script>var ws_url="{{ url }}"; var layer_props=String.raw`{{ layer_props if layer_props else "null"}}`; var file=String.raw`{{ file }}`; var cell="{{ cell }}"</script>
-    {% else %}
-        <script>var ws_url="{{ url }}"; var layer_props=String.raw`{{ layer_props if layer_props else "null"}}`; var file=String.raw`{{ file }}`; var cell=null</script>
-    {% endif %}
+    <script>var ws_url="{{ url }}"; var params = new URLSearchParams({{ params | tojson | safe }})</script>
     <script type="text/javascript" src={{ url_for("kweb_static", path="viewer.js") }}></script>
-    <script type="text/javascript" src={{ url_for("kweb_static", path="/bootstrap/bootstrap.bundle.min.js") }}></script>
 </body>
 </html>
