@@ -31,6 +31,11 @@ class Config(pydantic.BaseSettings):  # type: ignore[valid-type, misc]
         env_nested_delimiter = "_"
 
     fileslocation: Path
+    meta_splitter: str = ":"
+    editable: bool = False
+    add_missing_layers: bool = True
+    max_rdb_limit: int = 100
+    """Maximum rdb errors the client can request."""
 
     @pydantic.validator("fileslocation")
     @classmethod

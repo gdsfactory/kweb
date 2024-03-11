@@ -87,7 +87,7 @@ multi_line_output = 3
 skip = ["kweb/__init__.py"]
 
 [tool.mypy]
-plugins = "pydantic.mypy"
+plugins = "pydantic.mypy, numpy.typing.mypy_plugin"
 python_version = "3.10"
 strict = true
 
