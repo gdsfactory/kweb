@@ -71,7 +71,8 @@
                                 type="button"
                                 role="tab"
                                 aria-controls="rdb-tab-pane"
-                                aria-selected="false">RDB</button>
+                                aria-selected="false"
+                                hidden>RDB</button>
                     </li>
                 </ul>
                 <div class="tab-content" id="rightpanel-content">
@@ -106,41 +107,47 @@
                          role="tabpanel"
                          aria-labelledby="rdb-tab"
                          tabindex="0">
-                        <div class="form-floating my-1">
-                            <input type="text"
-                                   class="form-control"
-                                   id="rdbCategory"
-                                   oninput="filterCategories(this);"
-                                   onfocus="categoryFocus(event);"
-                                   onfocusout="categoryFocusOut(event);"
-                                   placeholder="...">
-                            <label for="floatingInput">Filter by Category</label>
+                        <div class="position-relative">
+                            <div class="form-floating my-1">
+                                <input type="text"
+                                       class="form-control z-0"
+                                       id="rdbCategory"
+                                       oninput="filterCategories(this);"
+                                       onfocus="categoryFocus(event);"
+                                       onfocusout="categoryFocusOut(event);"
+                                       placeholder="...">
+                                <label class="z-0" for="floatingInput">Filter by Category</label>
+                            </div>
+                            <select class="form-select my-1 position-absolute bottom-end-0 z-2 bg-light-subtle"
+                                    onchange="selectCategory(event)"
+                                    size="5"
+                                    id="rdbCategoryOptions"
+                                    onfocusout="categoryFocusOut(event);"
+                                    hidden></select>
                         </div>
-                        <select class="form-select my-1"
-                                onchange="selectCategory(event)"
-                                size="5"
-                                id="rdbCategoryOptions"
-                                hidden></select>
+                    </div>
+                    <div class="position-relative">
                         <div class="form-floating my-1">
                             <input type="text"
-                                   class="form-control"
+                                   class="form-control z-0"
                                    id="rdbCell"
                                    oninput="filterCells(this);"
                                    onfocus="cellFocus(event);"
                                    onfocusout="cellFocusOut(event);"
                                    placeholder="...">
-                            <label for="floatingPassword">Filter by Cell</label>
+                            <label class="z-0" for="floatingPassword">Filter by Cell</label>
                         </div>
-                        <select class="form-select my-1"
+                        <select class="form-select my-1 position-absolute bottom-end-0 z-2 bg-light-subtle"
                                 onchange="selectCell(event);"
                                 size="5"
                                 id="rdbCellOptions"
+                                onfocusout="cellFocusOut(event);"
                                 hidden></select>
-                        <select class="form-select my-1"
-                                onchange="requestItemDrawings();"
-                                multiple
-                                id="rdbItems"></select>
                     </div>
+                    <select class="form-select my-1"
+                            onchange="requestItemDrawings();"
+                            multiple
+                            id="rdbItems"></select>
                 </div>
             </div>
         </div>

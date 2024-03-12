@@ -641,6 +641,8 @@ async function addAccordion(entry, jsonKey, jsonValue) {
 }
 
 async function updateRdbTab(rdbinfo) {
+  const rdbButton = document.getElementById("rdb-tab");
+  rdbButton.hidden = false;
 
   categoryList.replaceChildren();
   cellList.replaceChildren();
@@ -749,6 +751,7 @@ async function selectCell(event) {
 
 async function updateRdbItems(items) {
   rdbItems.replaceChildren();
+
   for (const [id, tags] of Object.entries(items)) {
     let option = document.createElement("option");
     option.value = id;
