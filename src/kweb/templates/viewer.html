@@ -125,29 +125,29 @@
                                     onfocusout="categoryFocusOut(event);"
                                     hidden></select>
                         </div>
-                    </div>
-                    <div class="position-relative">
-                        <div class="form-floating my-1">
-                            <input type="text"
-                                   class="form-control z-0"
-                                   id="rdbCell"
-                                   oninput="filterCells(this);"
-                                   onfocus="cellFocus(event);"
-                                   onfocusout="cellFocusOut(event);"
-                                   placeholder="...">
-                            <label class="z-0" for="floatingPassword">Filter by Cell</label>
+                        <div class="position-relative">
+                            <div class="form-floating my-1">
+                                <input type="text"
+                                       class="form-control z-0"
+                                       id="rdbCell"
+                                       oninput="filterCells(this);"
+                                       onfocus="cellFocus(event);"
+                                       onfocusout="cellFocusOut(event);"
+                                       placeholder="...">
+                                <label class="z-0" for="floatingPassword">Filter by Cell</label>
+                            </div>
+                            <select class="form-select position-absolute bottom-end-0 z-2 bg-light-subtle"
+                                    onchange="selectCell(event);"
+                                    size="5"
+                                    id="rdbCellOptions"
+                                    onfocusout="cellFocusOut(event);"
+                                    hidden></select>
                         </div>
-                        <select class="form-select position-absolute bottom-end-0 z-2 bg-light-subtle"
-                                onchange="selectCell(event);"
-                                size="5"
-                                id="rdbCellOptions"
-                                onfocusout="cellFocusOut(event);"
-                                hidden></select>
+                        <select class="form-select my-1"
+                                onchange="requestItemDrawings();"
+                                multiple
+                                id="rdbItems"></select>
                     </div>
-                    <select class="form-select my-1"
-                            onchange="requestItemDrawings();"
-                            multiple
-                            id="rdbItems"></select>
                 </div>
             </div>
         </div>
