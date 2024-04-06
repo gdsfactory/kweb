@@ -5,7 +5,7 @@ import base64
 import json
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, Literal
 from urllib.parse import parse_qs
 
 # NOTE: import db to enable stream format readers
@@ -15,11 +15,74 @@ import klayout.rdb as rdb
 from fastapi import WebSocket
 from starlette.endpoints import WebSocketEndpoint
 from typing import Iterator
+from pydantic import BaseModel, Field
+from pydantic.color import Color
 
 port = 8765
 host = "localhost"
 
 CellDict: TypeAlias = "dict[str, int | str | list[CellDict]]"
+
+
+class MarkerCategory(BaseModel):
+    color: int
+    dither_pattern: int
+    frame_color: int
+    halo: int
+    line_style: int
+    line_width: int
+
+    def __init__(
+        self,
+        color: int | str | bytes = "red",
+        dither_pattern: int = 0,
+        frame_color: int | str | bytes = "red",
+        halo: Literal[-1, 0, 1] = -1,
+        line_style: int = 0,
+        line_width: int = 0,
+    ):
+        super().__init__(
+            color=int(Color(color).as_hex(format="long"), 16),
+            dither_pattern=dither_pattern,
+            frame_color=int(Color(color).as_hex(formate="long"), 16),
+            halo=halo,
+            line_style=line_style,
+            line_width=line_width,
+        )
+
+
+class ItemMarkerGroup(BaseModel):
+    markers: dict[int, lay.Marker] = Field(default_factory=dict)
+    lv: lay.LayoutView
+    categories: dict[str, MarkerCategory]
+
+    def clear(self) -> None:
+        self.markers = {}
+
+    def add_item(self, item: rdb.RdbItem, category: str) -> None:
+        cat = self.categories[category]
+
+        def get_marker() -> lay.Maker:
+            m = lay.Marker(self.lv)
+            m.dither_pattern = cat.dither_pattern
+            m.color = cat.color
+            m.frame_color = cat.frame_color
+            return m
+
+        for value in item.each_value():
+            if value.is_box():
+                self.markers.append()
+            if value.is_edge():
+                self.markers.append()
+            if value.is_edge_pair():
+                self.markers.append()
+            if value.is_path():
+                self.markers.append()
+            if value.is_polygon():
+                self.markers.append()
+        dbbox = self.layout_view.active_cellview().cell.dbbox(self.rdb_layer)
+        dbbox.enlarge(dbbox.width() * 0.1, dbbox.height() * 0.1)
+        self.lv.zoom_box(dbbox)
 
 
 class LayoutViewServerEndpoint(WebSocketEndpoint):
