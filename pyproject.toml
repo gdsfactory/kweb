@@ -15,7 +15,8 @@ dependencies = [
   "klayout >= 0.28.17",
   "fastapi",
   "uvicorn[standard]",
-  "jinja2"
+  "jinja2",
+  "pydantic_extra_types"
 ]
 description = "KLayout API implementation of gdsfactory"
 name = "kweb"

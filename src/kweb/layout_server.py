@@ -4,6 +4,7 @@ import asyncio
 import base64
 import json
 from collections.abc import Callable
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, TypeAlias, Literal
 from urllib.parse import parse_qs
@@ -16,7 +17,7 @@ from fastapi import WebSocket
 from starlette.endpoints import WebSocketEndpoint
 from typing import Iterator
 from pydantic import BaseModel, Field
-from pydantic.color import Color
+from pydantic_extra_types.color import Color
 
 port = 8765
 host = "localhost"
@@ -34,55 +35,81 @@ class MarkerCategory(BaseModel):
 
     def __init__(
         self,
-        color: int | str | bytes = "red",
-        dither_pattern: int = 0,
-        frame_color: int | str | bytes = "red",
+        color: int | str | tuple[int, int, int] = "red",
+        dither_pattern: int = 5,
+        frame_color: int | str | tuple[int, int, int] = "blue",
         halo: Literal[-1, 0, 1] = -1,
         line_style: int = 0,
-        line_width: int = 0,
+        line_width: int = 1,
     ):
+        if isinstance(color, int):
+            color = (color % 256**3, color % 256**2, color % 256)
         super().__init__(
-            color=int(Color(color).as_hex(format="long"), 16),
+            color=int(Color(color).as_hex(format="long")[1:], 16),
             dither_pattern=dither_pattern,
-            frame_color=int(Color(color).as_hex(formate="long"), 16),
+            frame_color=int(Color(color).as_hex(format="long")[1:], 16),
             halo=halo,
             line_style=line_style,
             line_width=line_width,
         )
 
 
-class ItemMarkerGroup(BaseModel):
-    markers: dict[int, lay.Marker] = Field(default_factory=dict)
-    lv: lay.LayoutView
-    categories: dict[str, MarkerCategory]
+class ItemMarkerGroup:
+    markers: list[lay.Marker] = Field(default_factory=list)
 
     def clear(self) -> None:
-        self.markers = {}
+        self.markers = []
 
-    def add_item(self, item: rdb.RdbItem, category: str) -> None:
-        cat = self.categories[category]
-
-        def get_marker() -> lay.Maker:
-            m = lay.Marker(self.lv)
-            m.dither_pattern = cat.dither_pattern
-            m.color = cat.color
-            m.frame_color = cat.frame_color
+    def add_item(
+        self,
+        item: rdb.RdbItem,
+        category: MarkerCategory,
+        bbox: db.DBox,
+        lv: lay.LayoutView,
+    ) -> db.DBox:
+        def get_marker() -> lay.Marker:
+            m = lay.Marker(lv)
+            m.dither_pattern = category.dither_pattern
+            m.color = category.color
+            m.frame_color = category.frame_color
+            m.halo = category.halo
+            m.line_style = category.line_style
+            m.line_width = category.line_width
+            self.markers.append(m)
             return m
 
         for value in item.each_value():
             if value.is_box():
-                self.markers.append()
+                box = value.box()
+                m = get_marker()
+                m.set_box(box)
+                bbox += box
             if value.is_edge():
-                self.markers.append()
+                edge = value.edge()
+                m = get_marker()
+                m.set_edge(edge)
+                bbox += edge.bbox()
             if value.is_edge_pair():
-                self.markers.append()
+                ep = value.edge_pair()
+                m1 = get_marker()
+                m1.set_edge(ep.first)
+                m2 = get_marker()
+                m2.set_edge(ep.second)
+                mp = get_marker()
+                mp.line_width = 0
+                mp.set_polygon(ep.polygon(0))
+                bbox += ep.bbox()
             if value.is_path():
-                self.markers.append()
+                path = value.path()
+                m = get_marker()
+                m.set_path(path)
+                bbox += path.bbox()
             if value.is_polygon():
-                self.markers.append()
-        dbbox = self.layout_view.active_cellview().cell.dbbox(self.rdb_layer)
-        dbbox.enlarge(dbbox.width() * 0.1, dbbox.height() * 0.1)
-        self.lv.zoom_box(dbbox)
+                polygon = value.polygon()
+                m = get_marker()
+                m.set_polygon(polygon)
+                bbox += polygon.bbox()
+        return bbox
 
 
 class LayoutViewServerEndpoint(WebSocketEndpoint):
@@ -373,32 +400,24 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
         )
 
     async def draw_items(self, items: dict[int, bool]) -> None:
-        ly = self.layout_view.active_cellview().layout()
-        ly.clear_layer(self.rdb_layer)
+        dbbox = db.DBox()
+        self.marker_group.clear()
         for index, selected in items.items():
             if selected:
                 item = self.rdb_items[int(index)]
-                cell = self.cell_map[item.cell_id()]
-                if cell:
-                    for value in item.each_value():
-                        if value.is_box():
-                            cell.shapes(self.rdb_layer).insert(value.box())
-                        if value.is_edge():
-                            cell.shapes(self.rdb_layer).insert(value.edge())
-                        if value.is_edge_pair():
-                            cell.shapes(self.rdb_layer).insert(
-                                value.edge_pair().polygon(0)
-                            )
-                        if value.is_path():
-                            cell.shapes(self.rdb_layer).insert(value.path())
-                        if value.is_polygon():
-                            cell.shapes(self.rdb_layer).insert(value.polygon())
-        dbbox = self.layout_view.active_cellview().cell.dbbox(self.rdb_layer)
+                dbbox = self.marker_group.add_item(
+                    item=item,
+                    category=self.marker_categories[item.category_id()],
+                    bbox=dbbox,
+                    lv=self.layout_view,
+                )
         dbbox.enlarge(dbbox.width() * 0.1, dbbox.height() * 0.1)
         self.layout_view.zoom_box(dbbox)
 
     async def connection(self, websocket: WebSocket, path: str | None = None) -> None:
         self.layout_view = lay.LayoutView(self.editable)
+        self.marker_group = ItemMarkerGroup()
+        self.marker_categories: dict[int, MarkerCategory] = defaultdict(MarkerCategory)
         self.layout_view.load_layout(self.url)
         self.rdb_layer = self.layout_view.active_cellview().layout().layer("RDB View")
         self.layout_view.add_missing_layers()
