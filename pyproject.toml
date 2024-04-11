@@ -22,7 +22,7 @@ description = "KLayout API implementation of gdsfactory"
 name = "kweb"
 readme = "README.md"
 requires-python = ">=3.10"
-version = "1.2.1"
+version = "2.0.0"
 
 [project.optional-dependencies]
 dev = [
@@ -129,7 +129,7 @@ message_template = "Bump to {new_version}"
 tag_template = "v{new_version}"
 
 [tool.tbump.version]
-current = "1.2.1"
+current = "2.0.0"
 # Example of a semver regexp.
 # Make sure this matches current_version before
 # using tbump
