@@ -3,6 +3,10 @@
 
 # What's Changed
 
+## New
+
+- Kweb 2.0 [#47](https://github.com/gdsfactory/kweb/pull/47)
+
 ## Other changes
 
 - update pyproject/workflows [#40](https://github.com/gdsfactory/kweb/pull/40)
