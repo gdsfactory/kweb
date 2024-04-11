@@ -1,4 +1,4 @@
-# kweb 2.0.0
+# kweb 2.0.1
 
 KLayout Web Viewer ![demo](docs/_static/kweb.png)
 
