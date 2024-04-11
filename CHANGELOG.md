@@ -11,6 +11,7 @@
 
 ## Dependency Updates
 
+- Bump docutils from 0.21.post1 to 0.21.1 [#46](https://github.com/gdsfactory/kweb/pull/46)
 - Bump docutils from 0.20.1 to 0.21.post1 [#45](https://github.com/gdsfactory/kweb/pull/45)
 - Bump docutils from 0.17.1 to 0.20.1 [#23](https://github.com/gdsfactory/kweb/pull/23)
 - Bump sphinx-book-theme from 0.3.3 to 1.1.2 [#41](https://github.com/gdsfactory/kweb/pull/41)
