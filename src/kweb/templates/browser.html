@@ -18,7 +18,7 @@
     <div class="container-fluid w-100 overflow-scroll" id="files-panel">
         {% for file in folder_files %}
             <div class="d-flex flex-row p-2">
-                <a href={{ url_for("file_view_static", file_name=file) }} class="btn btn-primary text-start">{{ file }}</a>
+                <a href={{ url_for("file_view_static").include_query_params(file=file) }} class="btn btn-primary text-start">{{ file }}</a>
             </div>
         {% endfor %}
     </div>

@@ -1,17 +1,23 @@
-#!/usr/bin/env python3
+from __future__ import annotations
 
 import asyncio
 import base64
 import json
 from collections.abc import Callable
+from collections import defaultdict
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, Literal
+from urllib.parse import parse_qs
 
 # NOTE: import db to enable stream format readers
 import klayout.db as db
 import klayout.lay as lay
+import klayout.rdb as rdb
 from fastapi import WebSocket
 from starlette.endpoints import WebSocketEndpoint
+from typing import Iterator
+from pydantic import BaseModel, Field
+from pydantic_extra_types.color import Color
 
 port = 8765
 host = "localhost"
@@ -19,32 +25,132 @@ host = "localhost"
 CellDict: TypeAlias = "dict[str, int | str | list[CellDict]]"
 
 
+class MarkerCategory(BaseModel):
+    color: int
+    dither_pattern: int
+    frame_color: int
+    halo: int
+    line_style: int
+    line_width: int
+
+    def __init__(
+        self,
+        color: int | str | tuple[int, int, int] = "red",
+        dither_pattern: int = 5,
+        frame_color: int | str | tuple[int, int, int] = "blue",
+        halo: Literal[-1, 0, 1] = -1,
+        line_style: int = 0,
+        line_width: int = 1,
+    ):
+        if isinstance(color, int):
+            color = (color % 256**3, color % 256**2, color % 256)
+        super().__init__(
+            color=int(Color(color).as_hex(format="long")[1:], 16),
+            dither_pattern=dither_pattern,
+            frame_color=int(Color(color).as_hex(format="long")[1:], 16),
+            halo=halo,
+            line_style=line_style,
+            line_width=line_width,
+        )
+
+
+class ItemMarkerGroup:
+    markers: list[lay.Marker] = Field(default_factory=list)
+
+    def clear(self) -> None:
+        self.markers = []
+
+    def add_item(
+        self,
+        item: rdb.RdbItem,
+        category: MarkerCategory,
+        bbox: db.DBox,
+        lv: lay.LayoutView,
+    ) -> db.DBox:
+        def get_marker() -> lay.Marker:
+            m = lay.Marker(lv)
+            m.dither_pattern = category.dither_pattern
+            m.color = category.color
+            m.frame_color = category.frame_color
+            m.halo = category.halo
+            m.line_style = category.line_style
+            m.line_width = category.line_width
+            self.markers.append(m)
+            return m
+
+        for value in item.each_value():
+            if value.is_box():
+                box = value.box()
+                m = get_marker()
+                m.set_box(box)
+                bbox += box
+            if value.is_edge():
+                edge = value.edge()
+                m = get_marker()
+                m.set_edge(edge)
+                bbox += edge.bbox()
+            if value.is_edge_pair():
+                ep = value.edge_pair()
+                m1 = get_marker()
+                m1.set_edge(ep.first)
+                m2 = get_marker()
+                m2.set_edge(ep.second)
+                mp = get_marker()
+                mp.line_width = 0
+                mp.set_polygon(ep.polygon(0))
+                bbox += ep.bbox()
+            if value.is_path():
+                path = value.path()
+                m = get_marker()
+                m.set_path(path)
+                bbox += path.bbox()
+            if value.is_polygon():
+                polygon = value.polygon()
+                m = get_marker()
+                m.set_polygon(polygon)
+                bbox += polygon.bbox()
+        return bbox
+
+
 class LayoutViewServerEndpoint(WebSocketEndpoint):
     editable: bool = False
     add_missing_layers: bool = True
+    meta_splitter: str
+    root: Path
+    max_rdb_limit: int = 100
 
     def __init_subclass__(
-        cls, editable: bool = False, add_missing_layers: bool = True, **kwargs: Any
+        cls,
+        root: Path,
+        editable: bool = False,
+        add_missing_layers: bool = True,
+        meta_splitter: str = ":",
+        max_rdb_limit: int = 100,
+        **kwargs: Any,
     ):
         super().__init_subclass__(**kwargs)
         cls.editable = editable
         cls.add_missing_layers = add_missing_layers
+        cls.meta_splitter = meta_splitter
+        cls.root = root
+        cls.max_rdb_limit = max_rdb_limit
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-        _params = self.scope["query_string"].decode("utf-8")
-        _params_splitted = _params.split("&")
-        params = {}
-        for _param in _params_splitted:
-            key, value = _param.split("=")
-            params[key] = value
-
-        self.url = params["file"]
-        self.layer_props = params.get("layer_props", None)
-        self.initial_cell: str | None = None
-        if "cell" in params:
-            self.initial_cell = params["cell"]
+        params = parse_qs(self.scope["query_string"].decode("utf-8"))
+        self.url = str(self.root / params["file"][0])
+        self.layer_props = params.get("layer_props", [None])[0]
+        if self.layer_props:
+            self.layer_props = str(self.root / self.layer_props)
+        self.rdb_file = params.get("rdb", [None])[0]
+        if self.rdb_file:
+            self.rdb_file = str(self.root / self.rdb_file)
+        self.initial_cell = params.get("cell", [None])[0]
+        self.db = rdb.ReportDatabase("kwebrdb")
+        self.rdb_items: dict[int, rdb.RdbItem] = {}
+        self.cell_map: dict[int, db.Cell | None] = {}
+        self.rdb_layer: int = -1  # place holder until initialization
 
     async def on_connect(self, websocket: WebSocket) -> None:
         await websocket.accept()
@@ -74,10 +180,52 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
         ci = cv.cell_index
         return cv.layout().cell(ci)
 
-    def set_current_cell(self, ci: int | str) -> None:
+    async def set_current_cell(self, ci: int | str, websocket: WebSocket) -> None:
         cell = self.layout_view.active_cellview().layout().cell(ci)
         self.layout_view.active_cellview().cell = cell
         self.layout_view.max_hier()
+        await self.send_metainfo(
+            cell=cell, websocket=websocket, splitter=self.meta_splitter
+        )
+
+    async def send_metainfo(
+        self,
+        cell: db.Cell,
+        websocket: WebSocket,
+        splitter: str | None,
+    ) -> None:
+        metainfo: Any = {}
+
+        flat = False
+        if splitter is not None:
+            for m in cell.each_meta_info():
+                keys = m.name.split(splitter)
+                d: Any = metainfo
+                for key in keys[:-1]:
+                    if key not in d:
+                        d[key] = {}
+                    if not isinstance(d[key], dict):
+                        flat = True
+                        break
+                    else:
+                        d = d[key]
+                d[keys[-1]] = m.value
+
+                if flat:
+                    break
+        if flat:
+            for m in cell.each_meta_info():
+                metainfo[m.name] = m.value
+
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "msg": "metainfo",
+                    "metainfo": metainfo,
+                },
+                default=meta_json_serializer,
+            )
+        )
 
     def layer_dump(
         self,
@@ -251,32 +399,131 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
             )
         )
 
+    async def draw_items(self, items: dict[int, bool]) -> None:
+        dbbox = db.DBox()
+        self.marker_group.clear()
+        for index, selected in items.items():
+            if selected:
+                item = self.rdb_items[int(index)]
+                dbbox = self.marker_group.add_item(
+                    item=item,
+                    category=self.marker_categories[item.category_id()],
+                    bbox=dbbox,
+                    lv=self.layout_view,
+                )
+        dbbox.enlarge(dbbox.width() * 0.1, dbbox.height() * 0.1)
+        self.layout_view.zoom_box(dbbox)
+
     async def connection(self, websocket: WebSocket, path: str | None = None) -> None:
         self.layout_view = lay.LayoutView(self.editable)
+        self.marker_group = ItemMarkerGroup()
+        self.marker_categories: dict[int, MarkerCategory] = defaultdict(MarkerCategory)
         self.layout_view.load_layout(self.url)
-        if Path(self.layer_props).is_file():
-            self.layout_view.load_layer_props(self.layer_props)
+        self.rdb_layer = self.layout_view.active_cellview().layout().layer("RDB View")
+        self.layout_view.add_missing_layers()
+        if self.layer_props and Path(self.layer_props).is_file():
+            try:
+                self.layout_view.load_layer_props(self.layer_props)
+            except RuntimeError as e:
+                await websocket.send_text(
+                    json.dumps(
+                        {
+                            "msg": "error",
+                            "details": "Error loading layper properties file (.lyp)\nError:\n"
+                            + str(e),
+                        }
+                    )
+                )
+                self.layer_props = None
         if self.initial_cell:
-            self.set_current_cell(self.initial_cell)
+            await self.set_current_cell(self.initial_cell, websocket)
             self.layout_view.zoom_fit()
+        loaded_rdb = False
+        if self.rdb_file:
+            ly = self.layout_view.active_cellview().layout()
+            try:
+                self.db.load(self.rdb_file)
+                loaded_rdb = True
+                self.cell_map = {
+                    cell.rdb_id(): ly.cell(cell.qname()) for cell in self.db.each_cell()
+                }
+            except RuntimeError as e:
+                await websocket.send_text(
+                    json.dumps(
+                        {
+                            "msg": "error",
+                            "details": "Error loading rdb file\nError:\n" + str(e),
+                        }
+                    )
+                )
+                self.rdb_file = None
         if self.add_missing_layers:
             self.layout_view.add_missing_layers()
         self.layout_view.max_hier()
 
-        await websocket.send_text(
-            json.dumps(
-                {
-                    "msg": "loaded",
-                    "modes": self.mode_dump(),
-                    "annotations": self.annotation_dump(),
-                    "layers": self.layer_dump(),
-                    "hierarchy": self.hierarchy_dump(),
-                    "ci": self.current_cell().cell_index(),
-                }
+        if self.layout_view.active_cellview().layout().cells():
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "msg": "loaded",
+                        "modes": self.mode_dump(),
+                        "annotations": self.annotation_dump(),
+                        "layers": self.layer_dump(),
+                        "hierarchy": self.hierarchy_dump(),
+                        "ci": self.current_cell().cell_index(),
+                    }
+                )
             )
-        )
+            await self.send_metainfo(
+                cell=self.current_cell(),
+                websocket=websocket,
+                splitter=self.meta_splitter,
+            )
+        else:
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "msg": "loaded",
+                        "modes": self.mode_dump(),
+                        "annotations": self.annotation_dump(),
+                        "layers": self.layer_dump(),
+                        "hierarchy": self.hierarchy_dump(),
+                        "ci": 0,
+                    }
+                )
+            )
+
+        if loaded_rdb:
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "msg": "rdbinfo",
+                        "rdbinfo": {
+                            "categories": {
+                                cat.path(): cat.rdb_id()
+                                for cat in self.db.each_category()
+                            },
+                            "cells": {
+                                cell.qname(): cell.rdb_id()
+                                for cell in self.db.each_cell()
+                            },
+                        },
+                    }
+                )
+            )
 
         asyncio.create_task(self.timer(websocket))
+
+    async def get_records(
+        self, category_id: int | None, cell_id: int | None
+    ) -> Iterator[rdb.RdbItem]:
+        if category_id is not None and cell_id is not None:
+            return self.db.each_item_per_cell_and_category(cell_id, category_id)
+        if category_id is not None:
+            return self.db.each_item_per_category(category_id)
+        if cell_id is not None:
+            return self.db.each_item_per_cell(cell_id)
+        return self.db.each_item()
 
     async def timer(self, websocket: WebSocket) -> None:
         def update() -> None:
@@ -284,7 +531,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
 
         self.layout_view.on_image_updated_event = update  # type: ignore[assignment]
         while True:
-            self.layout_view.timer()  # type: ignore[attr-defined]
+            self.layout_view.timer()
             await asyncio.sleep(0.01)
 
     def buttons_from_js(self, js: dict[str, int]) -> int:
@@ -306,7 +553,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
         return buttons
 
     def wheel_event(
-        self, function: Callable[[int, bool, db.Point, int], None], js: dict[str, int]
+        self, function: Callable[[int, bool, db.DPoint, int], None], js: dict[str, int]
     ) -> None:
         delta = 0
         dx = js["dx"]
@@ -319,7 +566,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
             horizontal = False
         if delta != 0:
             function(
-                delta, horizontal, db.Point(js["x"], js["y"]), self.buttons_from_js(js)
+                delta, horizontal, db.DPoint(js["x"], js["y"]), self.buttons_from_js(js)
             )
 
     def mouse_event(
@@ -382,18 +629,16 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
             case "mode_select":
                 self.layout_view.switch_mode(js["mode"])
             case "mouse_move":
-                self.mouse_event(
-                    self.layout_view.send_mouse_move_event, js  # type: ignore[arg-type]
-                )
+                self.mouse_event(self.layout_view.send_mouse_move_event, js)
             case "mouse_pressed":
                 self.mouse_event(
                     self.layout_view.send_mouse_press_event,
-                    js,  # type: ignore[arg-type]
+                    js,
                 )
             case "mouse_released":
                 self.mouse_event(
                     self.layout_view.send_mouse_release_event,
-                    js,  # type: ignore[arg-type]
+                    js,
                 )
             case "mouse_enter":
                 self.layout_view.send_enter_event()
@@ -405,22 +650,42 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                     js,
                 )
             case "wheel":
-                self.wheel_event(
-                    self.layout_view.send_wheel_event, js  # type: ignore[arg-type]
-                )
+                self.wheel_event(self.layout_view.send_wheel_event, js)
             case "keydown":
                 self.key_event(js)
             case "ci-s":
-                self.set_current_cell(js["ci"])
+                await self.set_current_cell(js["ci"], websocket)
                 self.layout_view.zoom_fit()
             case "cell-s":
-                self.set_current_cell(js["cell"])
+                await self.set_current_cell(js["cell"], websocket)
                 self.layout_view.zoom_fit()
             case "zoom-f":
                 self.layout_view.zoom_fit()
+            case "rdb-records":
+                item_iter = await self.get_records(
+                    category_id=js["category_id"], cell_id=js["cell_id"]
+                )
+                self.rdb_items = {
+                    i: item for i, item in zip(range(self.max_rdb_limit), item_iter)
+                }
+                await websocket.send_json(
+                    {
+                        "msg": "rdb-items",
+                        "items": {
+                            i: item.tags_str or "<no tags>"
+                            for i, item in self.rdb_items.items()
+                        },
+                    }
+                )
+            case "rdb-selected":
+                await self.draw_items(js["items"])
 
 
-class EditableLayoutViewServerEndpoint(
-    LayoutViewServerEndpoint, editable=True, add_missing_layers=True
-):
-    pass
+def meta_json_serializer(obj: object) -> str:
+    return str(obj)
+
+
+# class EditableLayoutViewServerEndpoint(
+#     LayoutViewServerEndpoint, editable=True, add_missing_layers=True
+# ):
+#     pass

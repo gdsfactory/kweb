@@ -1,13 +1,7 @@
 
-ws_url = ws_url.replace("http://","ws://");
-ws_url = ws_url.replace("https://","wss://");
+ws_url = ws_url.replace("http://","ws://").replace("https://", "wss://");
 
-let url;
-if (cell) {
-  url = ws_url + '/ws?' + "file=" + file + "&layer_props=" + layer_props + "&cell=" + cell;
-} else {
-  url = ws_url + '/ws?' + "file=" + file + "&layer_props=" + layer_props;
-}
+let url = ws_url + '/ws?' + params.toString();
 
 let canvas = document.getElementById("layout_canvas");
 let context = canvas.getContext("2d");
@@ -17,6 +11,16 @@ let message = document.getElementById("message");
 let socket = new WebSocket(url);
 socket.binaryType = "blob";
 let initialized = false;
+
+const categoryList = document.getElementById("rdbCategoryOptions");
+const cellList = document.getElementById("rdbCellOptions");
+cellList.selectedIndex = -1;
+categoryList.selectedIndex = -1;
+
+const rdbCategory = document.getElementById("rdbCategory");
+const rdbCell = document.getElementById("rdbCell");
+
+const rdbItems = document.getElementById("rdbItems");
 
 async function initializeWebSocket() {
   await new Promise((resolve) => {
@@ -33,7 +37,7 @@ async function initializeWebSocket() {
 }
 
 //  Installs a handler for the messages delivered by the web socket
-socket.onmessage = function(evt) {
+socket.onmessage = async function(evt) {
 
   let data = evt.data;
   if (typeof(data) === "string") {
@@ -46,7 +50,15 @@ socket.onmessage = function(evt) {
       showMenu(js.modes, js.annotations);
       showCells(js.hierarchy, js.ci)
     } else if (js.msg == "layer-u") {
-      updateLayerImages(js.layers)
+      updateLayerImages(js.layers);
+    } else if (js.msg == "metainfo") {
+      updateMetaInfo(js.metainfo);
+    } else if (js.msg == "rdbinfo") {
+      updateRdbTab(js.rdbinfo);      
+    } else if (js.msg == "error") {
+      alert(js.details);
+    } else if (js.msg == "rdb-items") {
+      await updateRdbItems(js.items);
     }
   } else if (initialized) {
 
@@ -553,6 +565,222 @@ function updateLayerImages(layers) {
   });
 }
 
+async function updateMetaInfo(metainfo) {
+  const metaInfoPane = document.getElementById("metainfo-tab-pane");
+  const metaInfoButton = document.getElementById("metainfo-tab");
+  metaInfoPane.replaceChildren();
+  let metaRow = document.createElement("div");
+  metaRow.className = "row mx-0";
+  metaInfoPane.appendChild(metaRow);
+
+  let hideMeta = true;
+
+  let entry = {index: 0};
+
+  for (const [key,value] of Object.entries(metainfo)) {
+    metaRow.appendChild( await addAccordion(entry, key,value));
+    hideMeta = false;
+  }
+
+  metaInfoButton.hidden = hideMeta;
+  
+}
+
+async function addAccordion(entry, jsonKey, jsonValue) {
+  let accordion = document.createElement("div");
+  let i = entry.index;
+
+  if (addpaddings){
+    accordion.className = "accordion accordion-flush px-2";
+  } else {
+    accordion.className = "accordion accordion-flush ps-2 pe-0";
+  }
+  accordion.id = "metaGroup" + i;
+
+  let accordion_item = document.createElement("div");
+  accordion_item.className = "accordion-item";
+  accordion.appendChild(accordion_item);
+
+  let accordion_header = document.createElement("div");
+  accordion_header.className = "accordion-header d-flex flex-row";
+  accordion_item.appendChild(accordion_header);
+
+
+  let accordion_collapse = document.createElement("div")
+  accordion_collapse.className = "accordion-collapse show";
+  accordion_collapse.setAttribute("data-bs-parent", "#" + accordion.id);
+  accordion_collapse.id = "collapseGroupMeta" + i;
+  accordion_item.appendChild(accordion_collapse);
+
+  let accordion_body = document.createElement("div");
+  accordion_body.className = "accordion-body p-0";
+  accordion_collapse.appendChild(accordion_body);
+
+  entry.index += 1;
+
+  if (typeof jsonValue === 'object') {
+    let accordion_header_button = document.createElement("button");
+    accordion_header_button.className = "accordion-button p-0 w-auto border-bottom";
+    accordion_header_button.setAttribute("type", "button");
+    accordion_header_button.setAttribute("data-bs-toggle", "collapse");
+    accordion_header_button.setAttribute("data-bs-target", "#collapseGroupMeta" + i);
+    accordion_header_button.setAttribute("aria-expanded", "true");
+    accordion_header_button.setAttribute("aria-controls", "collapseGroupMeta" + i);
+    accordion_header_button.textContent = jsonKey
+
+    accordion_header.appendChild(accordion_header_button);
+    for (const [key, value] of Object.entries(jsonValue)) {
+      accordion_body.appendChild(await addAccordion(entry,key,value));
+    }
+  } else {
+    accordion_body.textContent = `${jsonKey}: ${jsonValue}`;
+  }
+
+  return accordion;
+
+}
+
+async function updateRdbTab(rdbinfo) {
+  const rdbButton = document.getElementById("rdb-tab");
+  rdbButton.hidden = false;
+
+  categoryList.replaceChildren();
+  cellList.replaceChildren();
+
+  for (const [category,id] of Object.entries(rdbinfo.categories)) {
+    opt = document.createElement("option")
+    opt.value = id
+    opt.textContent = category
+    categoryList.appendChild(opt)
+  }
+  for (const [cell,id] of Object.entries(rdbinfo.cells)) {
+    opt = document.createElement("option")
+    opt.value = id
+    opt.textContent = cell
+    cellList.appendChild(opt)
+  }
+}
+
+function categoryFocus(event) {
+  categoryList.hidden=false;
+}
+function categoryFocusOut(event) {
+  if (event.relatedTarget != categoryList) {
+    categoryList.hidden=true;
+}}
+function cellFocus(event) {
+  cellList.hidden=false;
+}
+function cellFocusOut(event) {
+  if (event.relatedTarget != cellList) {
+    cellList.hidden=true;
+}}
+
+async function filterCategories(input) {
+  let value = input.value;
+  if (value === ""){
+    categoryList.options.selectedIndex=-1;
+    for (let i = 0; i < categoryList.options.length; i++) {
+      let option = categoryList.options[i];
+      option.hidden = false;
+    }
+  } else {
+    let regex = new RegExp(input.value, 'i')
+    let selected = false;
+    for (let i = 0; i < categoryList.options.length; i++) {
+      let option = categoryList.options[i];
+      if (regex.test(option.text)) {
+        option.hidden = false;
+        if (option.text === input.value) {
+          selected = true;
+          categoryList.options.selectedIndex = i;
+        }
+      } else {
+        option.hidden=true;
+      }
+      if (!selected) {
+        categoryList.options.selectedIndex=-1;
+      }
+    }
+  }
+}
+async function selectCategory(event) {
+  let index = event.target.selectedIndex;
+  if (index >= 0) {
+    let option = event.target.options[index];
+    rdbCategory.value = option.text;
+  }
+  await sendRdbCategoryAndCell();
+}
+async function filterCells(input) {
+  let value = input.value;
+  if (value === ""){
+    cellList.options.selectedIndex=-1;
+    for (let i = 0; i < cellList.options.length; i++) {
+      let option = cellList.options[i];
+      option.hidden = false;
+    }
+  } else {
+    let regex = new RegExp(input.value, 'i')
+    let selected = false;
+    for (let i = 0; i < cellList.options.length; i++) {
+      let option = cellList.options[i];
+      if (regex.test(option.text)) {
+        option.hidden = false;
+        if (option.text === input.value) {
+          selected = true;
+          cellList.options.selectedIndex = i;
+        }
+      } else {
+        option.hidden=true;
+      }
+      if (!selected) {
+        cellList.options.selectedIndex=-1;
+      }
+    }
+  }
+}
+async function selectCell(event) {
+  let index = event.target.selectedIndex;
+  if (index >= 0) {
+    let option = event.target.options[index];
+    rdbCell.value = option.text;
+  }
+  await sendRdbCategoryAndCell();
+}
+
+async function updateRdbItems(items) {
+  rdbItems.replaceChildren();
+
+  for (const [id, tags] of Object.entries(items)) {
+    let option = document.createElement("option");
+    option.value = id;
+    option.text = tags;
+    rdbItems.appendChild(option)
+  }
+}
+
+async function requestItemDrawings() {
+  let json = {"msg": "rdb-selected", "items": {}}
+  for (let i = 0; i < rdbItems.options.length; i++) {
+    json.items[i] = rdbItems.options[i].selected;
+  }
+  socket.send(JSON.stringify(json));
+}
+
+async function sendRdbCategoryAndCell() {
+  let categoryIndex = categoryList.selectedIndex;
+  let cellIndex = cellList.selectedIndex;
+  let category_id = null;
+  let cell_id = null;
+  if (cellIndex != -1) {
+     cell_id = +cellList.options[cellIndex].value;
+  }
+  if (categoryIndex != -1) {
+     category_id = +categoryList.options[categoryIndex].value;
+  }
+  socket.send(JSON.stringify({"msg": "rdb-records", "category_id": category_id, "cell_id": cell_id}))
+}
 
 //  Prevents the context menu to show up over the canvas area
 canvas.addEventListener('contextmenu', function(evt) {
