@@ -1,5 +1,33 @@
-<a name="v1.1.2"></a>
-# [v1.1.2](https://github.com/gdsfactory/kweb/releases/tag/v1.1.2) - 22 Aug 2023
+<a name="v2.0.2"></a>
+# [v2.0.2](https://github.com/gdsfactory/kweb/releases/tag/v2.0.2) - 16 Jul 2024
+
+# What's Changed
+
+## Dependency Updates
+
+- Bump sphinx-book-theme from 1.1.2 to 1.1.3 [#50](https://github.com/gdsfactory/kweb/pull/50)
+
+**Full Changelog**: https://github.com/gdsfactory/kweb/compare/v2.0.1...v2.0.2
+
+
+[Changes][v2.0.2]
+
+
+<a name="v2.0.1"></a>
+# [v2.0.1](https://github.com/gdsfactory/kweb/releases/tag/v2.0.1) - 16 Jul 2024
+
+# What's Changed
+
+* No changes
+
+**Full Changelog**: https://github.com/gdsfactory/kweb/compare/v2.0.0...v2.0.1
+
+
+[Changes][v2.0.1]
+
+
+<a name="v2.0.0"></a>
+# [v2.0.0](https://github.com/gdsfactory/kweb/releases/tag/v2.0.0) - 11 Apr 2024
 
 # What's Changed
 
@@ -23,7 +51,7 @@
 **Full Changelog**: https://github.com/gdsfactory/kweb/compare/v1.1.1...v1.1.2
 
 
-[Changes][v1.1.2]
+[Changes][v2.0.0]
 
 
 <a name="v1.1.1"></a>
@@ -44,7 +72,9 @@
 [Changes][v1.0.0]
 
 
-[v1.1.2]: https://github.com/gdsfactory/kweb/compare/v1.1.1...v1.1.2
+[v2.0.2]: https://github.com/gdsfactory/kweb/compare/v2.0.1...v2.0.2
+[v2.0.1]: https://github.com/gdsfactory/kweb/compare/v2.0.0...v2.0.1
+[v2.0.0]: https://github.com/gdsfactory/kweb/compare/v1.1.1...v2.0.0
 [v1.1.1]: https://github.com/gdsfactory/kweb/compare/v1.0.0...v1.1.1
 [v1.0.0]: https://github.com/gdsfactory/kweb/tree/v1.0.0
 
