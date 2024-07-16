@@ -202,6 +202,7 @@ function showMenu(modes, annotations) {
   let menuElement = document.getElementById("menu");
 
   let clearRulers = document.createElement("button");
+  clearRulers.id = "clearRulers";
   clearRulers.textContent = "Clear Rulers";
   clearRulers.className = "col-auto btn btn-primary mx-2";
   clearRulers.setAttribute("type", "button");
@@ -210,6 +211,7 @@ function showMenu(modes, annotations) {
   };
   menuElement.appendChild(clearRulers);
   let zoomFit= document.createElement("button");
+  zoomFit.id = "zoomFit";
   zoomFit.textContent = "Zoom Fit";
   zoomFit.className = "col-auto btn btn-primary mx-2";
   zoomFit.setAttribute("type", "button");
@@ -218,6 +220,7 @@ function showMenu(modes, annotations) {
   };
   menuElement.appendChild(zoomFit);
   let reload = document.createElement("button");
+  reload.id = "reload";
   reload.textContent = "Reload";
   reload.className = "col-auto btn btn-primary mx-2";
   reload.setAttribute("type", "button");
