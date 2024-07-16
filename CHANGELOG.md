@@ -1,7 +1,26 @@
+<a name="v2.0.3"></a>
+# [v2.0.3](https://github.com/gdsfactory/kweb/releases/tag/v2.0.3) - 16 Jul 2024
+
+# What's Changed
+
+## New
+
+- add html ids to clear rulers, zoom fit, and reload buttons [#53](https://github.com/gdsfactory/kweb/pull/53)
+
+**Full Changelog**: https://github.com/gdsfactory/kweb/compare/v2.0.2...v2.0.3
+
+
+[Changes][v2.0.3]
+
+
 <a name="v2.0.2"></a>
 # [v2.0.2](https://github.com/gdsfactory/kweb/releases/tag/v2.0.2) - 16 Jul 2024
 
 # What's Changed
+
+## New
+
+- Reload Button [#52](https://github.com/gdsfactory/kweb/pull/52)
 
 ## Dependency Updates
 
@@ -73,6 +92,7 @@
 [Changes][v1.0.0]
 
 
+[v2.0.3]: https://github.com/gdsfactory/kweb/compare/v2.0.2...v2.0.3
 [v2.0.2]: https://github.com/gdsfactory/kweb/compare/v2.0.1...v2.0.2
 [v2.0.1]: https://github.com/gdsfactory/kweb/compare/v2.0.0...v2.0.1
 [v2.0.0]: https://github.com/gdsfactory/kweb/compare/v1.1.1...v2.0.0
