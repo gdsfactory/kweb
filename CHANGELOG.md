@@ -5,6 +5,7 @@
 
 ## Dependency Updates
 
+- Bump docutils from 0.21.1 to 0.21.2 [#48](https://github.com/gdsfactory/kweb/pull/48)
 - Bump sphinx-book-theme from 1.1.2 to 1.1.3 [#50](https://github.com/gdsfactory/kweb/pull/50)
 
 **Full Changelog**: https://github.com/gdsfactory/kweb/compare/v2.0.1...v2.0.2
