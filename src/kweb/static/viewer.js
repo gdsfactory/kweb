@@ -217,6 +217,15 @@ function showMenu(modes, annotations) {
     socket.send(JSON.stringify({ msg: "zoom-f" }));
   };
   menuElement.appendChild(zoomFit);
+  let reload = document.createElement("button");
+  reload.textContent = "Reload";
+  reload.className = "col-auto btn btn-primary mx-2";
+  reload.setAttribute("type", "button");
+  reload.onclick = function() {
+    socket.send(JSON.stringify({ msg: "reload" }));
+  };
+  menuElement.appendChild(reload);
+  
 
   let index = 0;
 

@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: "v4.5.0"
+    rev: "v4.6.0"
     hooks:
       - id: check-added-large-files
         exclude: |
@@ -19,7 +19,7 @@ repos:
       # - id: trailing-whitespace
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: "v0.2.0"
+    rev: "v0.5.2"
     hooks:
       - id: ruff
   - repo: https://github.com/djlint/djLint
@@ -40,18 +40,18 @@ repos:
             src/kweb/static/bootstrap/.*
           )$
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.9.0.6
+    rev: v0.10.0.1
     hooks:
       - id: shellcheck
            
   - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-    rev: v2.12.0
+    rev: v2.14.0
     hooks:
       - id: pretty-format-toml
         args: [--autofix]
 
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.6
+    rev: v2.3.0
     hooks:
       - id: codespell
         additional_dependencies:

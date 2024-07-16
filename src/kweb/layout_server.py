@@ -679,13 +679,13 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                 )
             case "rdb-selected":
                 await self.draw_items(js["items"])
+            case "reload":
+                self.layout_view.reload_layout(
+                    self.layout_view.active_cellview().index()
+                )
+                if self.rdb_file is not None:
+                    self.db.load(self.rdb_file)
 
 
 def meta_json_serializer(obj: object) -> str:
     return str(obj)
-
-
-# class EditableLayoutViewServerEndpoint(
-#     LayoutViewServerEndpoint, editable=True, add_missing_layers=True
-# ):
-#     pass

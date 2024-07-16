@@ -34,7 +34,7 @@ KWeb offers two basic apps:
 
 ### Development
 
-#### Clone & Installl
+#### Clone & Install
 
 
 ```bash
