@@ -1,3 +1,18 @@
+<a name="v2.0.4"></a>
+# [v2.0.4](https://github.com/gdsfactory/kweb/releases/tag/v2.0.4) - 11 Aug 2024
+
+# What's Changed
+
+## Bug Fixes
+
+- fix reload not updating frontend [#54](https://github.com/gdsfactory/kweb/pull/54)
+
+**Full Changelog**: https://github.com/gdsfactory/kweb/compare/v2.0.3...v2.0.4
+
+
+[Changes][v2.0.4]
+
+
 <a name="v2.0.3"></a>
 # [v2.0.3](https://github.com/gdsfactory/kweb/releases/tag/v2.0.3) - 16 Jul 2024
 
@@ -92,6 +107,7 @@
 [Changes][v1.0.0]
 
 
+[v2.0.4]: https://github.com/gdsfactory/kweb/compare/v2.0.3...v2.0.4
 [v2.0.3]: https://github.com/gdsfactory/kweb/compare/v2.0.2...v2.0.3
 [v2.0.2]: https://github.com/gdsfactory/kweb/compare/v2.0.1...v2.0.2
 [v2.0.1]: https://github.com/gdsfactory/kweb/compare/v2.0.0...v2.0.1
