@@ -462,17 +462,9 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
         self.layout_view.max_hier()
 
         if self.layout_view.active_cellview().layout().cells():
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "msg": "loaded",
-                        "modes": self.mode_dump(),
-                        "annotations": self.annotation_dump(),
-                        "layers": self.layer_dump(),
-                        "hierarchy": self.hierarchy_dump(),
-                        "ci": self.current_cell().cell_index(),
-                    }
-                )
+            await self._send_loaded(
+                websocket=websocket,
+                cell_index=self.current_cell().cell_index(),
             )
             await self.send_metainfo(
                 cell=self.current_cell(),
@@ -480,17 +472,9 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                 splitter=self.meta_splitter,
             )
         else:
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "msg": "loaded",
-                        "modes": self.mode_dump(),
-                        "annotations": self.annotation_dump(),
-                        "layers": self.layer_dump(),
-                        "hierarchy": self.hierarchy_dump(),
-                        "ci": 0,
-                    }
-                )
+            await self._send_loaded(
+                websocket=websocket,
+                cell_index=0,
             )
 
         if loaded_rdb:
@@ -680,11 +664,49 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
             case "rdb-selected":
                 await self.draw_items(js["items"])
             case "reload":
+                cname = self.current_cell().name
                 self.layout_view.reload_layout(
                     self.layout_view.active_cellview().index()
                 )
+                c = self.layout_view.active_cellview().layout().cell(cname)
+                if c is None:
+                    tcs = self.layout_view.active_cellview().layout().top_cells()
+                    if len(tcs) > 0:
+                        c = tcs[0]
+
+                ci = 0
+                if c is not None:
+                    ci = c.cell_index()
+                await self.set_current_cell(ci, websocket=websocket)
                 if self.rdb_file is not None:
                     self.db.load(self.rdb_file)
+
+                await self._send_reloaded(
+                    websocket=websocket,
+                    cell_index=self.current_cell().cell_index(),
+                )
+
+    async def _send_loaded(self, websocket: WebSocket, cell_index: int = 0) -> None:
+        await websocket.send_json(
+            {
+                "msg": "loaded",
+                "modes": self.mode_dump(),
+                "annotations": self.annotation_dump(),
+                "layers": self.layer_dump(),
+                "hierarchy": self.hierarchy_dump(),
+                "ci": cell_index,
+            }
+        )
+
+    async def _send_reloaded(self, websocket: WebSocket, cell_index: int = 0) -> None:
+        await websocket.send_json(
+            {
+                "msg": "reloaded",
+                "layers": self.layer_dump(),
+                "hierarchy": self.hierarchy_dump(),
+                "ci": cell_index,
+            }
+        )
 
 
 def meta_json_serializer(obj: object) -> str:
