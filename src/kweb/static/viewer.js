@@ -49,6 +49,11 @@ socket.onmessage = async function(evt) {
       showLayers(js.layers);
       showMenu(js.modes, js.annotations);
       showCells(js.hierarchy, js.ci)
+    } else if (js.msg == "reloaded") {
+      console.log(js.hierarchy)
+      console.log(js.ci)
+      showLayers(js.layers);
+      showCells(js.hierarchy, js.ci)
     } else if (js.msg == "layer-u") {
       updateLayerImages(js.layers);
     } else if (js.msg == "metainfo") {
@@ -414,6 +419,7 @@ function showLayers(layers) {
   let layerTable = document.getElementById("table-layer") || document.createElement("div");
   layerTable.id = "table-layer";
   layerTable.className = "container-fluid text-left px-0 pb-2";
+  layerTable.replaceChildren();
   layerElement.replaceChildren(layerButtons, layerTable);
 
   appendLayers(layerTable, layers, addempty=!layerSwitch.checked, addpaddings=true);
