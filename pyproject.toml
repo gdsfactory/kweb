@@ -36,7 +36,7 @@ dev = [
 ]
 docs = [
   "sphinx",
-  "docutils==0.21.2",
+  "docutils==0.23",
   "sphinx_rtd_theme",
   "sphinxcontrib-video",
   "sphinx-autodoc-typehints",
