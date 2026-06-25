@@ -22,6 +22,112 @@ const rdbCell = document.getElementById("rdbCell");
 
 const rdbItems = document.getElementById("rdbItems");
 
+const layerSearchInput = document.getElementById("layerSearchInput");
+const layerClearSearch = document.getElementById("layerClearSearch");
+const layerShowAllButton = document.getElementById("layerShowAll");
+const layerHideAllButton = document.getElementById("layerHideAll");
+const layerPresetSelect = document.getElementById("layerPresetSelect");
+const layerSavePresetButton = document.getElementById("layerSavePreset");
+const layerDeletePresetButton = document.getElementById("layerDeletePreset");
+const layerSwitchToggle = document.getElementById("layerEmptySwitch");
+
+const measurementOverlay = document.getElementById("measurement-overlay");
+const measurementSummary = document.getElementById("measurement-summary");
+const measurementList = document.getElementById("measurement-list");
+const measurementExportButton = document.getElementById("measurement-export");
+const noteSummary = document.getElementById("note-summary");
+const noteList = document.getElementById("note-list");
+
+const layerPresetsStorageKey = "kweb-layer-presets";
+let layerTree = [];
+let layerFilterTerm = "";
+let layerPresets = loadLayerPresets();
+let suppressPresetChangeEvent = false;
+let measurementData = [];
+let noteData = [];
+let lastPointer = { x: null, y: null };
+
+if (layerSwitchToggle) {
+  layerSwitchToggle.addEventListener("change", () => renderLayerTable());
+}
+
+if (layerSearchInput) {
+  layerSearchInput.addEventListener("input", (event) => {
+    layerFilterTerm = event.target.value || "";
+    applyLayerFilter();
+  });
+}
+
+if (layerClearSearch) {
+  layerClearSearch.addEventListener("click", () => {
+    if (layerSearchInput) {
+      layerSearchInput.value = "";
+    }
+    layerFilterTerm = "";
+    applyLayerFilter();
+  });
+}
+
+if (layerShowAllButton) {
+  layerShowAllButton.addEventListener("click", () => {
+    setAllLayersVisibility(true);
+  });
+}
+
+if (layerHideAllButton) {
+  layerHideAllButton.addEventListener("click", () => {
+    setAllLayersVisibility(false);
+  });
+}
+
+if (layerPresetSelect) {
+  layerPresetSelect.addEventListener("change", (event) => {
+    if (suppressPresetChangeEvent) {
+      return;
+    }
+    const name = event.target.value;
+    if (name) {
+      applyLayerPreset(name);
+    }
+  });
+}
+
+if (layerSavePresetButton) {
+  layerSavePresetButton.addEventListener("click", () => {
+    const presetName = prompt("Preset name", "");
+    if (!presetName) {
+      return;
+    }
+    const trimmed = presetName.trim();
+    if (!trimmed) {
+      return;
+    }
+    layerPresets[trimmed] = collectLayerVisibilities(layerTree);
+    persistLayerPresets();
+    refreshLayerPresetOptions(trimmed);
+  });
+}
+
+if (layerDeletePresetButton) {
+  layerDeletePresetButton.addEventListener("click", () => {
+    const name = layerPresetSelect ? layerPresetSelect.value : "";
+    if (!name) {
+      return;
+    }
+    if (confirm(`Delete preset "${name}"?`)) {
+      delete layerPresets[name];
+      persistLayerPresets();
+      refreshLayerPresetOptions();
+    }
+  });
+}
+
+refreshLayerPresetOptions();
+
+if (measurementExportButton) {
+  measurementExportButton.addEventListener("click", exportMeasurementsAsCsv);
+}
+
 async function initializeWebSocket() {
   await new Promise((resolve) => {
     //  Installs a handler called when the connection is established
@@ -64,6 +170,8 @@ socket.onmessage = async function(evt) {
       alert(js.details);
     } else if (js.msg == "rdb-items") {
       await updateRdbItems(js.items);
+    } else if (js.msg == "measurement-update") {
+      updateAnnotationsOverlay(js.measurements, js.notes);
     }
   } else if (initialized) {
 
@@ -83,6 +191,8 @@ function mouseEventToJSON(canvas, type, evt) {
   let rect = canvas.getBoundingClientRect();
   let x = evt.clientX - rect.left;
   let y = evt.clientY - rect.top;
+  lastPointer.x = x;
+  lastPointer.y = y;
   let keys = 0;
   if (evt.shiftKey) {
     keys += 1;
@@ -205,6 +315,7 @@ function showMenu(modes, annotations) {
   });
 
   let menuElement = document.getElementById("menu");
+  menuElement.replaceChildren();
 
   let clearRulers = document.createElement("button");
   clearRulers.id = "clearRulers";
@@ -215,6 +326,13 @@ function showMenu(modes, annotations) {
     socket.send(JSON.stringify({ msg: "clear-annotations" }));
   };
   menuElement.appendChild(clearRulers);
+  let addNote = document.createElement("button");
+  addNote.id = "addNote";
+  addNote.textContent = "Add Note";
+  addNote.className = "col-auto btn btn-primary mx-2";
+  addNote.setAttribute("type", "button");
+  addNote.onclick = openAnnotationDialog;
+  menuElement.appendChild(addNote);
   let zoomFit= document.createElement("button");
   zoomFit.id = "zoomFit";
   zoomFit.textContent = "Zoom Fit";
@@ -410,25 +528,432 @@ function appendCells(parentelement, cells, current_index, addpadding=false) {
 }
 //  Updates the layer list
 function showLayers(layers) {
+  layerTree = layers;
+  renderLayerTable();
+}
 
-  let layerElement = document.getElementById("layers-tab-pane");
-  let layerButtons = document.getElementById("layer-buttons");
+function renderLayerTable() {
+  const layerElement = document.getElementById("layers-tab-pane");
+  const layerButtons = document.getElementById("layer-buttons");
+  if (!layerElement || !layerButtons) {
+    return;
+  }
 
-  let layerSwitch = document.getElementById("layerEmptySwitch");
-
-  let layerTable = document.getElementById("table-layer") || document.createElement("div");
+  let layerTable = document.getElementById("table-layer");
+  if (!layerTable) {
+    layerTable = document.createElement("div");
   layerTable.id = "table-layer";
   layerTable.className = "container-fluid text-left px-0 pb-2";
-  layerTable.replaceChildren();
-  layerElement.replaceChildren(layerButtons, layerTable);
+  }
 
-  appendLayers(layerTable, layers, addempty=!layerSwitch.checked, addpaddings=true);
-  layerSwitch.addEventListener("change", function() {
+  if (layerTable.parentElement !== layerElement) {
+  layerElement.replaceChildren(layerButtons, layerTable);
+  }
+
     layerTable.replaceChildren();
-    appendLayers(layerTable, layers, addempty=!this.checked, addpaddings=true);
+
+  if (!Array.isArray(layerTree) || layerTree.length === 0) {
+    applyLayerFilter();
+    return;
+  }
+
+  const includeEmptyLayers = !(layerSwitchToggle && layerSwitchToggle.checked);
+  appendLayers(layerTable, layerTree, includeEmptyLayers, true);
+  applyLayerFilter();
+}
+
+function applyLayerFilter() {
+  const term = (layerFilterTerm || "").trim().toLowerCase();
+  const rootAccordions = document.querySelectorAll("#table-layer .accordion[data-layer-id]");
+  if (!rootAccordions.length) {
+    return;
+  }
+  rootAccordions.forEach((accordion) => {
+    filterLayerElement(accordion, term);
+  });
+}
+
+function filterLayerElement(element, term) {
+  if (!element || !element.dataset) {
+    return false;
+  }
+  const layerName = (element.dataset.layerName || "").toLowerCase();
+  const layerSource = (element.dataset.layerSource || "").toLowerCase();
+  const matchesSelf = !term || layerName.includes(term) || layerSource.includes(term);
+
+  const body = element.querySelector(":scope > .accordion-item > .accordion-collapse > .accordion-body");
+  let childMatches = false;
+  if (body) {
+    const childAccordions = body.querySelectorAll(":scope > .accordion[data-layer-id]");
+    childMatches = Array.from(childAccordions).map((child) => filterLayerElement(child, term)).some(Boolean);
+  }
+
+  const shouldShow = matchesSelf || childMatches;
+  element.classList.toggle("layer-filter-hidden", !shouldShow);
+  const parentRow = element.parentElement;
+  if (parentRow && parentRow.classList && parentRow.classList.contains("row")) {
+    parentRow.classList.toggle("layer-filter-hidden", !shouldShow);
+  }
+  return shouldShow;
+}
+
+function setAllLayersVisibility(visible) {
+  if (!Array.isArray(layerTree) || !layerTree.length) {
+    return;
+  }
+  setVisibilityRecursively(layerTree, visible);
+  if (socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({ msg: "layer-v-all", value: visible }));
+  }
+  renderLayerTable();
+}
+
+function setVisibilityRecursively(layers, visible) {
+  layers.forEach((layer) => {
+    layer.v = visible;
+    updateLayerVisibilityClassById(layer.id, visible);
+    if (Array.isArray(layer.children) && layer.children.length > 0) {
+      setVisibilityRecursively(layer.children, visible);
+    }
+  });
+}
+
+function updateLayerVisibilityClassById(layerId, visible) {
+  const element = document.getElementById("layergroup-" + layerId);
+  if (element) {
+    element.classList.toggle("layer-hidden", !visible);
+  }
+}
+
+function updateLayerVisibilityInTree(layers, layerId, visible) {
+  if (!Array.isArray(layers)) {
+    return false;
+  }
+  for (const layer of layers) {
+    if (layer.id === layerId) {
+      layer.v = visible;
+      updateLayerVisibilityClassById(layerId, visible);
+      return true;
+    }
+    if (Array.isArray(layer.children) && updateLayerVisibilityInTree(layer.children, layerId, visible)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function collectLayerVisibilities(layers, result = {}) {
+  if (!Array.isArray(layers)) {
+    return result;
+  }
+  layers.forEach((layer) => {
+    result[layer.id] = Boolean(layer.v);
+    if (Array.isArray(layer.children) && layer.children.length > 0) {
+      collectLayerVisibilities(layer.children, result);
+    }
+  });
+  return result;
+}
+
+function loadLayerPresets() {
+  try {
+    const raw = window.localStorage.getItem(layerPresetsStorageKey);
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") {
+      return parsed;
+    }
+  } catch (err) {
+    console.warn("Error loading layer presets", err);
+  }
+  return {};
+}
+
+function persistLayerPresets() {
+  try {
+    window.localStorage.setItem(layerPresetsStorageKey, JSON.stringify(layerPresets));
+  } catch (err) {
+    console.warn("Error saving layer presets", err);
+  }
+}
+
+function refreshLayerPresetOptions(selectedName = "") {
+  if (!layerPresetSelect) {
+    return;
+  }
+  suppressPresetChangeEvent = true;
+  layerPresetSelect.replaceChildren();
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Select preset";
+  layerPresetSelect.appendChild(placeholder);
+  Object.keys(layerPresets)
+    .sort((a, b) => a.localeCompare(b))
+    .forEach((name) => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      layerPresetSelect.appendChild(option);
+    });
+  if (selectedName && layerPresets[selectedName]) {
+    layerPresetSelect.value = selectedName;
+  } else {
+    layerPresetSelect.value = "";
+  }
+  suppressPresetChangeEvent = false;
+}
+
+function applyLayerPreset(name) {
+  const preset = layerPresets[name];
+  if (!preset) {
+    return;
+  }
+  const current = collectLayerVisibilities(layerTree);
+  Object.entries(preset).forEach(([id, desired]) => {
+    const numericId = Number(id);
+    if (current[id] !== desired) {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ msg: "layer-v", id: numericId, value: desired }));
+      }
+      updateLayerVisibilityInTree(layerTree, numericId, desired);
+    }
+  });
+  renderLayerTable();
+}
+
+function updateAnnotationsOverlay(measurements, notes) {
+  measurementData = Array.isArray(measurements) ? measurements : [];
+  noteData = Array.isArray(notes) ? notes : [];
+  renderAnnotationsOverlay();
+}
+
+function renderAnnotationsOverlay() {
+  if (!measurementOverlay || !measurementList || !measurementSummary) {
+    return;
+  }
+
+  measurementList.replaceChildren();
+  if (noteList) {
+    noteList.replaceChildren();
+  }
+
+  const hasMeasurements = measurementData.length > 0;
+  const hasNotes = noteData.length > 0;
+
+  if (!hasMeasurements && !hasNotes) {
+    measurementOverlay.classList.add("d-none");
+    measurementSummary.textContent = "No active measurements";
+    if (noteSummary) {
+      noteSummary.textContent = "No notes";
+    }
+    if (measurementExportButton) {
+      measurementExportButton.disabled = true;
+    }
+    return;
+  }
+
+  measurementOverlay.classList.remove("d-none");
+  if (measurementExportButton) {
+    measurementExportButton.disabled = !hasMeasurements;
+  }
+
+  if (hasMeasurements) {
+    measurementSummary.textContent =
+      measurementData.length === 1
+        ? "1 active measurement"
+        : `${measurementData.length} active measurements`;
+  } else {
+    measurementSummary.textContent = "No active measurements";
+  }
+
+  measurementData.forEach((measurement, index) => {
+    const row = document.createElement("div");
+    row.className = "measurement-row d-flex justify-content-between align-items-center gap-2";
+
+    const label = document.createElement("span");
+    label.className = "measurement-label text-truncate";
+    const labelText =
+      measurement.label && measurement.label.trim().length > 0
+        ? measurement.label
+        : `Ruler ${index + 1}`;
+    label.textContent = labelText;
+
+    const values = document.createElement("span");
+    values.className = "measurement-values text-end text-nowrap";
+    const lengthText = formatMicrons(measurement.length);
+    const dxText = formatMicrons(measurement.dx);
+    const dyText = formatMicrons(measurement.dy);
+    const angleText = formatAngle(measurement.angle);
+    values.textContent = `L=${lengthText}µm Δx=${dxText}µm Δy=${dyText}µm θ=${angleText}°`;
+
+    row.appendChild(label);
+    row.appendChild(values);
+    measurementList.appendChild(row);
   });
 
+  if (noteSummary) {
+    noteSummary.textContent = hasNotes
+      ? noteData.length === 1
+        ? "1 note"
+        : `${noteData.length} notes`
+      : "No notes";
+  }
+
+  if (noteList && hasNotes) {
+    noteData.forEach((note, index) => {
+      const row = document.createElement("div");
+      row.className = "note-row d-flex justify-content-between align-items-center gap-2";
+
+      const label = document.createElement("span");
+      label.className = "note-label text-truncate";
+      const labelText =
+        note.text && note.text.trim().length > 0 ? note.text : `Note ${index + 1}`;
+      label.textContent = labelText;
+
+      const coords = document.createElement("span");
+      coords.className = "note-values text-end text-nowrap";
+      const xText = formatMicrons(note.position?.x);
+      const yText = formatMicrons(note.position?.y);
+      coords.textContent = `(${xText}µm, ${yText}µm)`;
+
+      row.appendChild(label);
+      row.appendChild(coords);
+      noteList.appendChild(row);
+    });
+  }
 }
+
+function formatMicrons(value) {
+  if (!Number.isFinite(value)) {
+    return "-";
+  }
+  const abs = Math.abs(value);
+  let decimals = 3;
+  if (abs >= 1000) {
+    decimals = 0;
+  } else if (abs >= 100) {
+    decimals = 1;
+  } else if (abs >= 10) {
+    decimals = 2;
+  }
+  return value.toFixed(decimals);
+}
+
+function formatAngle(value) {
+  if (!Number.isFinite(value)) {
+    return "-";
+  }
+  return value.toFixed(1);
+}
+
+function exportMeasurementsAsCsv() {
+  if (!measurementData.length) {
+    return;
+  }
+  const header = [
+    "id",
+    "label",
+    "length_um",
+    "dx_um",
+    "dy_um",
+    "angle_deg",
+    "p1_x_um",
+    "p1_y_um",
+    "p2_x_um",
+    "p2_y_um",
+  ];
+  const rows = measurementData.map((measurement) => {
+    const cells = [
+      measurement.id,
+      `"${((measurement.label || "") + "").replace(/"/g, '""')}"`,
+      csvNumber(measurement.length),
+      csvNumber(measurement.dx),
+      csvNumber(measurement.dy),
+      csvNumber(measurement.angle),
+      csvNumber(measurement.p1?.x),
+      csvNumber(measurement.p1?.y),
+      csvNumber(measurement.p2?.x),
+      csvNumber(measurement.p2?.y),
+    ];
+    return cells.join(",");
+  });
+  const csvContent = [header.join(","), ...rows].join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "kweb_measurements.csv";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function csvNumber(value) {
+  if (!Number.isFinite(value)) {
+    return "";
+  }
+  return value.toFixed(6);
+}
+
+const messages = {
+  en: {
+    annotationPrompt: "Note (the last cursor position will be used)",
+  },
+  es: {
+    annotationPrompt: "Nota (se usará la última posición del cursor)",
+  },
+};
+
+function getUserLanguage() {
+  return navigator.language?.slice(0, 2) || "en";
+}
+
+function getMessage(key) {
+  const lang = getUserLanguage();
+  if (messages[lang]?.[key]) {
+    return messages[lang][key];
+  }
+  if (messages.en?.[key]) {
+    return messages.en[key];
+  }
+  return "";
+}
+
+function getPointerCoordinates() {
+  let { x, y } = lastPointer;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    x = canvas ? canvas.clientWidth / 2 : 0;
+    y = canvas ? canvas.clientHeight / 2 : 0;
+  }
+  return { x, y };
+}
+
+function openAnnotationDialog() {
+  if (!canvas || !socket || socket.readyState !== WebSocket.OPEN) {
+    return;
+  }
+  const text = prompt(getMessage("annotationPrompt"), "");
+  if (text === null) {
+    return;
+  }
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return;
+  }
+  const pointer = getPointerCoordinates();
+  socket.send(
+    JSON.stringify({
+      msg: "add-annotation",
+      x: pointer.x,
+      y: pointer.y,
+      text: trimmed,
+    })
+  );
+}
+
   //  create table rows for each layer
 function appendLayers(parentelement, layers, addempty=false, addpaddings = false) {
 
@@ -451,6 +976,12 @@ function appendLayers(parentelement, layers, addempty=false, addpaddings = false
           accordion.className = "accordion accordion-flush ps-2 pe-0";
         }
         accordion.id = "layergroup-" + l.id;
+        accordion.dataset.layerId = l.id;
+        accordion.dataset.layerName = (l.name || "").toLowerCase();
+        accordion.dataset.layerSource = (l.s || "").toLowerCase();
+        if (!l.v) {
+          accordion.classList.add("layer-hidden");
+        }
 
 
         layerRow.appendChild(accordion);
@@ -550,6 +1081,12 @@ function appendLayers(parentelement, layers, addempty=false, addpaddings = false
           accordion.className = "accordion accordion-flush ps-2 pe-0";
         }
         accordion.id = "layergroup-" + l.id;
+        accordion.dataset.layerId = l.id;
+        accordion.dataset.layerName = (l.name || "").toLowerCase();
+        accordion.dataset.layerSource = (l.s || "").toLowerCase();
+        if (!l.v) {
+          accordion.classList.add("layer-hidden");
+        }
         layerRow.appendChild(accordion);
 
         accordion_item = document.createElement("div");
@@ -575,7 +1112,10 @@ function appendLayers(parentelement, layers, addempty=false, addpaddings = false
 function updateLayerImages(layers) {
   layers.forEach(function(l) {
     let layer_image = document.getElementById("layer-img-"+l.id);
+    if (layer_image) {
     layer_image.src = "data:image/png;base64," + l.img;
+    }
+    updateLayerVisibilityInTree(layerTree, l.id, l.v);
 
     if ("children" in l) {
       updateLayerImages(l.children);

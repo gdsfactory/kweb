@@ -9,6 +9,7 @@
         <link rel="stylesheet" href={{ url_for("kweb_static", path="/bootstrap/bootstrap.min.css") }}>
     </link>
     <link rel="stylesheet" href={{ url_for("kweb_static", path="/custom.css") }}>
+    <link rel="stylesheet" href={{ url_for("kweb_static", path="/client.css") }}>
     <script type="text/javascript" src={{ url_for("kweb_static", path="/bootstrap/bootstrap.bundle.min.js") }}></script>
 </link>
 <link rel="icon" type="image/png" href={{ url_for("kweb_static", path="img/kweb.png") }}>
@@ -26,6 +27,31 @@
                      id="floating-buttons">
                     <div id="modes" class="col m-0"></div>
                     <div id="menu" class="col m-0 px-2 text-end"></div>
+                    <div id="measurement-overlay"
+                         class="col-12 mt-3 measurement-overlay d-none">
+                        <div class="measurement-box">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-semibold">Annotations</span>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-outline-light"
+                                            type="button"
+                                            id="measurement-export">Export Rulers</button>
+                                </div>
+                            </div>
+                            <div id="measurement-section" class="mb-2">
+                                <div id="measurement-summary"
+                                     class="measurement-summary small text-secondary mb-1"></div>
+                                <div id="measurement-list"
+                                     class="measurement-list small"></div>
+                            </div>
+                            <div id="note-section" class="note-section">
+                                <div id="note-summary"
+                                     class="note-summary small text-secondary mb-1"></div>
+                                <div id="note-list"
+                                     class="note-list small"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div id="rightpanel"
@@ -89,6 +115,41 @@
                                        id="layerEmptySwitch"
                                        checked>
                                 <label class="form-check-label ps-2" for="layerEmptySwitch">Hide Empty Layers</label>
+                            </div>
+                            <div class="p-2 pt-0 layer-controls">
+                                <div class="input-group input-group-sm mb-2">
+                                    <span class="input-group-text">Filter</span>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="layerSearchInput"
+                                           placeholder="Layer name...">
+                                    <button class="btn btn-outline-secondary"
+                                            type="button"
+                                            id="layerClearSearch">Clear</button>
+                                </div>
+                                <div class="btn-group btn-group-sm w-100 mb-2"
+                                     role="group"
+                                     aria-label="Visibility shortcuts">
+                                    <button class="btn btn-outline-light"
+                                            type="button"
+                                            id="layerShowAll">Show all</button>
+                                    <button class="btn btn-outline-light"
+                                            type="button"
+                                            id="layerHideAll">Hide all</button>
+                                </div>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">Presets</span>
+                                    <select class="form-select"
+                                            id="layerPresetSelect">
+                                            <option value="" selected>Select preset</option>
+                                    </select>
+                                    <button class="btn btn-outline-primary"
+                                            type="button"
+                                            id="layerSavePreset">Save</button>
+                                    <button class="btn btn-outline-danger"
+                                            type="button"
+                                            id="layerDeletePreset">Delete</button>
+                                </div>
                             </div>
                         </div>
                     </div>

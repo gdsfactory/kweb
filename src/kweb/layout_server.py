@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
-from collections.abc import Callable
+import math
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, TypeAlias, Literal
+from typing import Any, Literal, TypeAlias
 from urllib.parse import parse_qs
 
 # NOTE: import db to enable stream format readers
@@ -118,6 +119,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
     meta_splitter: str
     root: Path
     max_rdb_limit: int = 100
+    note_category: str = "kweb-note"
 
     def __init_subclass__(
         cls,
@@ -174,6 +176,73 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
 
     def annotation_dump(self) -> list[str]:
         return [d[1] for d in self.layout_view.annotation_templates()]
+
+    def viewport_point_to_layout(self, x: float, y: float) -> db.DPoint:
+        trans = self.layout_view.viewport_trans().inverted()
+        return trans * db.DPoint(x, y)
+
+    def measurement_dump(self) -> list[dict[str, object]]:
+        measurements: list[dict[str, object]] = []
+        for annotation in self.layout_view.each_annotation():
+            if annotation.style != lay.Annotation.StyleRuler:
+                continue
+            try:
+                start = annotation.seg_p1(0)
+                end = annotation.seg_p2(0)
+            except RuntimeError:
+                continue
+            dx = end.x - start.x
+            dy = end.y - start.y
+            length = math.hypot(dx, dy)
+            angle = math.degrees(math.atan2(dy, dx)) if length else 0.0
+            label = ""
+            try:
+                label = annotation.text()
+            except TypeError:
+                # Some annotations might not provide text() when detached
+                label = ""
+            measurements.append(
+                {
+                    "id": annotation.id(),
+                    "p1": {"x": start.x, "y": start.y},
+                    "p2": {"x": end.x, "y": end.y},
+                    "dx": dx,
+                    "dy": dy,
+                    "length": length,
+                    "angle": angle,
+                    "label": label,
+                }
+            )
+        return measurements
+
+    def note_dump(self) -> list[dict[str, object]]:
+        notes: list[dict[str, object]] = []
+        for annotation in self.layout_view.each_annotation():
+            if annotation.category != self.note_category:
+                continue
+            point = annotation.p1
+            text = ""
+            try:
+                text = str(annotation.text())
+            except Exception:
+                text = ""
+            notes.append(
+                {
+                    "id": annotation.id(),
+                    "text": text,
+                    "position": {"x": point.x, "y": point.y},
+                }
+            )
+        return notes
+
+    async def send_measurements(self, websocket: WebSocket) -> None:
+        await websocket.send_json(
+            {
+                "msg": "measurement-update",
+                "measurements": self.measurement_dump(),
+                "notes": self.note_dump(),
+            }
+        )
 
     def current_cell(self) -> db.Cell:
         cv = self.layout_view.active_cellview()
@@ -466,6 +535,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                 websocket=websocket,
                 cell_index=self.current_cell().cell_index(),
             )
+            await self.send_measurements(websocket)
             await self.send_metainfo(
                 cell=self.current_cell(),
                 websocket=websocket,
@@ -476,6 +546,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                 websocket=websocket,
                 cell_index=0,
             )
+            await self.send_measurements(websocket)
 
         if loaded_rdb:
             await websocket.send_text(
@@ -497,6 +568,13 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
             )
 
         asyncio.create_task(self.timer(websocket))
+
+        def notify_measurements() -> None:
+            asyncio.create_task(self.send_measurements(websocket))
+
+        self.layout_view.on_annotations_changed = notify_measurements  # type: ignore[assignment]
+        self.layout_view.on_annotation_changed = notify_measurements  # type: ignore[assignment]
+        self.layout_view.on_annotation_selection_changed = notify_measurements  # type: ignore[assignment]
 
     async def get_records(
         self, category_id: int | None, cell_id: int | None
@@ -575,6 +653,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                 self.layout_view.resize(js["width"], js["height"])
             case "clear-annotations":
                 self.layout_view.clear_annotations()
+                await self.send_measurements(websocket)
             case "select-ruler":
                 ruler = js["value"]
                 self.layout_view.set_config("current-ruler-template", str(ruler))
@@ -640,11 +719,41 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
             case "ci-s":
                 await self.set_current_cell(js["ci"], websocket)
                 self.layout_view.zoom_fit()
+                await self.send_measurements(websocket)
             case "cell-s":
                 await self.set_current_cell(js["cell"], websocket)
                 self.layout_view.zoom_fit()
+                await self.send_measurements(websocket)
             case "zoom-f":
                 self.layout_view.zoom_fit()
+            case "add-annotation":
+                text = str(js.get("text", "")).strip()
+                if text:
+                    x = js.get("x")
+                    y = js.get("y")
+                    if x is None or y is None:
+                        x = self.layout_view.viewport_width() / 2
+                        y = self.layout_view.viewport_height() / 2
+                    try:
+                        point = self.viewport_point_to_layout(float(x), float(y))
+                    except (TypeError, ValueError):
+                        return
+                    note = lay.Annotation()
+                    note.category = self.note_category
+                    note.style = lay.Annotation.StyleCrossBoth
+                    note.p1 = point
+                    note.p2 = point
+                    note.fmt = text
+                    mag = self.layout_view.viewport_trans().mag or 1.0
+                    offset = 20.0 / mag
+                    note.text_x = point.x + offset
+                    note.text_y = point.y + offset
+                    try:
+                        note.snap = False  # type: ignore[attr-defined]
+                    except AttributeError:
+                        pass
+                    self.layout_view.insert_annotation(note)
+                    await self.send_measurements(websocket)
             case "rdb-records":
                 item_iter = await self.get_records(
                     category_id=js["category_id"], cell_id=js["cell_id"]
@@ -685,6 +794,7 @@ class LayoutViewServerEndpoint(WebSocketEndpoint):
                     websocket=websocket,
                     cell_index=self.current_cell().cell_index(),
                 )
+                await self.send_measurements(websocket)
 
     async def _send_loaded(self, websocket: WebSocket, cell_index: int = 0) -> None:
         await websocket.send_json(

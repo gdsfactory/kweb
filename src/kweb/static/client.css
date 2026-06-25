@@ -132,3 +132,78 @@ ul, #myUL {
   width: 80%;
   height: 80%;
 }
+
+.layer-controls .btn,
+.layer-controls .form-control,
+.layer-controls .form-select,
+.layer-controls .input-group-text {
+  font-size: 0.75rem;
+}
+
+.layer-hidden {
+  opacity: 0.4;
+}
+
+.layer-filter-hidden {
+  display: none !important;
+}
+
+#measurement-overlay .measurement-box {
+  background: rgba(0, 0, 0, 0.72);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: #f8f9fa;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.35);
+}
+
+#measurement-overlay .measurement-summary {
+  font-weight: 500;
+}
+
+#measurement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 10rem;
+  overflow-y: auto;
+}
+
+#measurement-list .measurement-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 0.35rem;
+}
+
+#measurement-list .measurement-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+#measurement-list .measurement-values {
+  font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.75rem;
+}
+
+#note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 8rem;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+}
+
+#note-list .note-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 0.35rem;
+}
+
+#note-list .note-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+#note-list .note-values {
+  font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.75rem;
+}
